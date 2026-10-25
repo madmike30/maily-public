@@ -11,6 +11,7 @@ No unsigned artifact can be described as perfectly safe. Use the checksums, read
 ## Version 1.3.1.0 evidence
 
 - Maintainer checkout: 56 synthetic checks passed, zero failed; merge gate passed. Independent release/privacy review found no remaining blocking findings.
+- Independent public checkout: all 54 application checks passed. Its two Git checks were rerun separately after correcting the test environment's checkout-ownership restriction; whitespace and all 199 text files passed. A pre-existing project-file BOM was removed and the affected project rebuilt successfully.
 - Packaged runtime: seven checks passed using synthetic English/Hebrew inputs, including current-draft meaning and language selection.
 - Local uninstall/reinstall: application removal verified, settings/logs preserved, reinstall had zero failed steps, and post-restart activation verification returned 0. Installed files matched the audited package and current assets were served without caching.
 - No existing mail was read and no messages were sent during this release validation.
