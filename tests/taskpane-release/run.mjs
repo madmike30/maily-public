@@ -6,7 +6,7 @@ const nodes=new Map([...html.matchAll(/id="([^"]+)"/g)].map(m=>[m[1],{textConten
 let item={id:'synthetic-item'},body='We can supply 37 on Friday.',inserts=0,undos=0,undoAvailable=false,requests=[],deferred=null,lastWritten='';
 const originalBody=body;
 const office={
- officeReady:async()=>{},ensureBackendAvailable:async()=>{},logClientEvent:async()=>{},getMailboxAddress:()=> 'author@example.test',getMailboxDisplayName:()=> 'Synthetic Author',detectPreferredLanguage:()=> 'Auto',applyDirectionToElement(){},
+ officeReady:async()=>{},ensureBackendAvailable:async()=>{},logClientEvent:async()=>{},getMailboxAddress:()=> 'author@example.invalid',getMailboxDisplayName:()=> 'Synthetic Author',detectPreferredLanguage:()=> 'Auto',applyDirectionToElement(){},
  captureComposeContext:()=>item,assertComposeContext(ctx){if(ctx!==item)throw Error('Item changed');},
  async getComposeSnapshot(defaults,mode){return {request:{compose:{subject:'Synthetic delivery',bodyText:body},operation:{mode,currentDraft:body},userPreferences:defaults},composeState:{body,bodyType:'text',userDraftText:body,canRewriteUserDraft:true,userDraftSegment:body,preservedSuffix:'',composeType:'reply'}};},
  async callJson(url,options){if(url.includes('/settings'))return {values:{tone:'professional',language:'English'}};const request=JSON.parse(options.body);requests.push(request);if(deferred)return await deferred;return {draft:{text:'We can supply 37 on Friday. Please confirm.',html:'<p>We can supply 37 on Friday. Please confirm.</p>'},meta:{}};},

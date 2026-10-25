@@ -139,7 +139,7 @@ await test('repeated plaintext generation preserves exact signature spacing', as
 await test('stale insertion retry uses the current edited body and discards the rejected preview', async () => {
   const f = fixture();
   const nodes = new Map();
-  for (const id of ['status', 'generateBtn', 'insertBtn', 'replyLanguageEnglishBtn', 'replyLanguageHebrewBtn', 'seedPanel', 'seedMeta', 'seedText', 'draftText', 'draftMeta']) {
+  for (const id of ['status', 'generateBtn', 'insertBtn', 'applyBtn', 'undoBtn', 'shorterBtn', 'clearerBtn', 'warmerBtn', 'replyLanguageEnglishBtn', 'replyLanguageHebrewBtn', 'seedPanel', 'seedMeta', 'seedText', 'draftText', 'draftMeta']) {
     nodes.set(id, { textContent: '', disabled: false, classList: { add() {}, remove() {}, toggle() {} },
       setAttribute() {}, addEventListener(event, handler) { this[event] = handler; } });
   }
@@ -169,18 +169,22 @@ await test('stale insertion retry uses the current edited body and discards the 
   }
   await waitIdle();
   assert.equal(requests.length, 1);
+  assert.equal(f.state.writes, 0, 'Preview cannot edit Outlook before explicit Apply');
+  await nodes.get('applyBtn').click();
   assert.match(nodes.get('status').textContent, /changed|regenerate/i);
   assert.equal(f.state.writes, 0);
   assert.equal(f.state.body, 'Meet Tuesday\nRegards,\nTest Sender');
   assert.equal(nodes.get('draftText').textContent, 'No generated draft yet.');
-  await nodes.get('insertBtn').click();
-  assert.equal(f.state.writes, 0);
-  assert.equal(nodes.get('status').textContent, 'Generate a reply first.');
+  await nodes.get('applyBtn').click();
+  assert.equal(f.state.writes, 0, 'Consumed stale preview cannot be applied again');
+  assert.equal(nodes.get('applyBtn').disabled, true);
   nodes.get('generateBtn').click();
   await waitIdle();
   assert.equal(requests.length, 2);
   assert.equal(requests[1].operation.currentDraft, 'Meet Tuesday');
   assert.equal(requests[1].operation.mode, 'generate-initial');
+  assert.equal(f.state.writes, 0, 'Retry also waits for explicit Apply');
+  await nodes.get('applyBtn').click();
   assert.equal(f.state.writes, 1);
   assert.ok(f.state.body.includes('Confirmed Tuesday answer'));
   assert.ok(!f.state.body.includes('Monday'));
@@ -202,7 +206,7 @@ await test('regeneration uses the live marked reply, including edits around the 
 await test('each rewrite replaces the current editable reply, not a cached result or only the marked block', async () => {
   const f = fixture();
   const nodes = new Map();
-  for (const id of ['status','generateBtn','insertBtn','replyLanguageEnglishBtn','replyLanguageHebrewBtn','seedPanel','seedMeta','seedText','draftText','draftMeta']) {
+  for (const id of ['status','generateBtn','insertBtn','applyBtn','undoBtn','shorterBtn','clearerBtn','warmerBtn','replyLanguageEnglishBtn','replyLanguageHebrewBtn','seedPanel','seedMeta','seedText','draftText','draftMeta']) {
     nodes.set(id,{textContent:'',disabled:false,classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(event,handler){this[event]=handler;}});
   }
   f.context.document={getElementById:id=>nodes.get(id)||null};
@@ -222,12 +226,16 @@ await test('each rewrite replaces the current editable reply, not a cached resul
   async function settled(){for(let i=0;i<100;i++){await new Promise(resolve=>setImmediate(resolve));if(requests.length&&!nodes.get('generateBtn').disabled)return;}throw new Error(nodes.get('status').textContent);}
   await settled();
   assert.equal(requests[0].operation.currentDraft,'Meet Tuesday at 11.');
+  assert.equal(f.state.writes,0,'Initial preview must not edit Outlook');
+  await nodes.get('applyBtn').click();
   assert.ok(!f.state.body.includes('Meet Tuesday at 11.'));
   assert.ok(f.state.body.endsWith(suffix));
   f.state.body='Please keep the revised date.\n'+f.state.body.replace('Polished version 1','Meet Wednesday at 12.');
   nodes.get('generateBtn').click(); await settled();
   assert.match(requests[1].operation.currentDraft,/Please keep the revised date/);
   assert.match(requests[1].operation.currentDraft,/Meet Wednesday at 12/);
+  assert.equal(f.state.writes,1,'Regeneration preview must not edit Outlook');
+  await nodes.get('applyBtn').click();
   assert.ok(!f.state.body.includes('Please keep the revised date'));
   assert.ok(!f.state.body.includes('Meet Wednesday'));
   assert.ok(f.state.body.endsWith(suffix));
@@ -235,11 +243,15 @@ await test('each rewrite replaces the current editable reply, not a cached resul
   f.state.body='Final user edit, without any generated markers.\n'+suffix;
   nodes.get('generateBtn').click(); await settled();
   assert.equal(requests[2].operation.currentDraft,'Final user edit, without any generated markers.');
+  assert.equal(f.state.writes,2,'Unmarked draft preview must not edit Outlook');
+  await nodes.get('applyBtn').click();
   assert.ok(!f.state.body.includes('Final user edit'));
   assert.ok(f.state.body.endsWith(suffix));
   f.state.body=f.state.body.replace('Polished version 3','Latest user wording.');
   await nodes.get('insertBtn').click(); await settled();
   assert.equal(requests[3].operation.currentDraft,'Latest user wording.');
+  assert.equal(f.state.writes,3,'Legacy button prepares a preview only');
+  await nodes.get('applyBtn').click();
   assert.ok(!f.state.body.includes('Latest user wording'));
   assert.equal(f.state.body.split('[Maily Reply Start]').length-1,1);
   const snapshotReader = f.office.getComposeSnapshot;
