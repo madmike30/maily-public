@@ -90,7 +90,7 @@
           return {
             // The mixed signature/thread snapshot is ambiguous to the UI; the
             // backend still receives Auto and returns the Hebrew reply below.
-            expectedSelectedLanguage: "",
+            expectedSelectedLanguage: "Automatic",
             expectedFinalRequestLanguage: "",
             expectedBodyText: "כן, אפשר להתקדם עם זה.",
             expectedGenerateLanguages: [""],
@@ -105,7 +105,7 @@
 
         return {
           // Latin script is intentionally Auto: it does not establish English.
-          expectedSelectedLanguage: "",
+          expectedSelectedLanguage: "Automatic",
           expectedFinalRequestLanguage: "",
           expectedBodyText: "Yes, please go ahead with it.",
           expectedGenerateLanguages: [""],

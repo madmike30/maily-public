@@ -1,4 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../../src/Maily.Generation/Maily.Generation.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../../src/Maily.Generation/Maily.Generation.csproj" /><FrameworkReference Include="Microsoft.AspNetCore.App" /><Compile Include="../../services/Maily.OutlookAddin.Web/Services/CodexCatalogWarmup.cs" Link="CodexCatalogWarmup.cs" /></ItemGroup>
 </Project>

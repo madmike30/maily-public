@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Maily Briefing</title>
-  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <link rel="stylesheet" href="./styles.css?v=20261025ux1">
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <script defer src="./js/maily-office.js?v=20261025public1"></script>
-  <script defer src="./js/daily-briefing.js?v=20261025public1"></script>
+  <script defer src="./js/maily-office.js?v=20261025ux1"></script>
+  <script defer src="./js/daily-briefing.js?v=20261025ux1"></script>
 </head>
 <body>
   <main class="shell">
@@ -17,17 +17,20 @@
           <h1 class="title">Briefing</h1>
         </div>
       </div>
+      <details class="details-card"><summary id="briefingLanguageSummary">Language: Automatic</summary>
       <div class="language-picker" aria-label="Briefing generation language">
         <span id="briefingLanguageLabel" class="language-picker-label">Briefing language</span>
         <div class="language-pill-group" role="group" aria-labelledby="briefingLanguageLabel">
-          <button id="briefingLanguageEnglishBtn" class="language-pill is-selected" type="button" aria-pressed="true">English</button>
+          <button id="briefingLanguageAutoBtn" class="language-pill is-selected" type="button" aria-pressed="true">Automatic</button>
+          <button id="briefingLanguageEnglishBtn" class="language-pill" type="button" aria-pressed="true">English</button>
           <button id="briefingLanguageHebrewBtn" class="language-pill" type="button" aria-pressed="false">Hebrew</button>
         </div>
       </div>
+      </details>
     </header>
 
-    <p id="briefingStatus" class="status">Loading mailbox context...</p>
-    <p id="briefingMeta" class="meta">No briefing generated yet.</p>
+    <p id="briefingStatus" class="status" role="status" aria-live="polite" aria-atomic="true">Loading mailbox context...</p>
+    <p id="briefingMeta" class="meta" hidden>No briefing generated yet.</p>
 
     <section class="summary-stack">
       <article class="summary-card summary-card-strong">

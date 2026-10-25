@@ -13,7 +13,7 @@
   <Description DefaultValue="Generate polished reply drafts directly from Outlook compose." />
   <IconUrl DefaultValue="https://localhost:7097/addin/assets/icon-32.png?v=1.2.9" />
   <HighResolutionIconUrl DefaultValue="https://localhost:7097/addin/assets/icon-80.png?v=1.2.9" />
-  <SupportUrl DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025public1" />
+  <SupportUrl DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025ux1" />
   <AppDomains>
     <AppDomain>https://localhost:7097</AppDomain>
     <AppDomain>http://localhost:5289</AppDomain>
@@ -29,7 +29,7 @@
   <FormSettings>
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025public1" />
+        <SourceLocation DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025ux1" />
       </DesktopSettings>
     </Form>
   </FormSettings>
@@ -140,12 +140,12 @@
           <bt:Image id="Maily.Icon80" DefaultValue="https://localhost:7097/addin/assets/icon-80.png?v=1.2.9" />
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="Maily.Taskpane.Url" DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025public1" />
-          <bt:Url id="Maily.Summary.Url" DefaultValue="https://localhost:7097/addin/summary.html?v=20261025public1" />
-          <bt:Url id="Maily.ReadSummary.Url" DefaultValue="https://localhost:7097/addin/summary-read.html?v=20261025public1" />
-          <bt:Url id="Maily.Search.Url" DefaultValue="https://localhost:7097/addin/search.html?v=20261025public1" />
-          <bt:Url id="Maily.Settings.Url" DefaultValue="https://localhost:7097/addin/settings.html?v=20261025public1" />
-          <bt:Url id="Maily.Briefing.Url" DefaultValue="https://localhost:7097/addin/daily-briefing.html?v=20261025public1" />
+          <bt:Url id="Maily.Taskpane.Url" DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025ux1" />
+          <bt:Url id="Maily.Summary.Url" DefaultValue="https://localhost:7097/addin/summary.html?v=20261025ux1" />
+          <bt:Url id="Maily.ReadSummary.Url" DefaultValue="https://localhost:7097/addin/summary-read.html?v=20261025ux1" />
+          <bt:Url id="Maily.Search.Url" DefaultValue="https://localhost:7097/addin/search.html?v=20261025ux1" />
+          <bt:Url id="Maily.Settings.Url" DefaultValue="https://localhost:7097/addin/settings.html?v=20261025ux1" />
+          <bt:Url id="Maily.Briefing.Url" DefaultValue="https://localhost:7097/addin/daily-briefing.html?v=20261025ux1" />
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="Maily.Compose.Group.Label" DefaultValue="Maily" />

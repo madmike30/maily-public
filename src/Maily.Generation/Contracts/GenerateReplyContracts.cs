@@ -21,6 +21,7 @@ public sealed class GenerateReplyComposeContext
 	public string Subject { get; set; } = string.Empty;
 	public string FromAddress { get; set; } = string.Empty;
 	public string FromDisplayName { get; set; } = string.Empty;
+	public bool FromIsComposeSender { get; set; }
 	public List<string> To { get; set; } = [];
 	public List<string> Cc { get; set; } = [];
 	public string BodyType { get; set; } = "html";

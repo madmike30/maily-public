@@ -1,7 +1,8 @@
 param(
     [string] $BrowserPath = $env:MAILY_TEST_BROWSER,
     [string] $CaseName = '',
-    [string] $OutputDirectory = ''
+    [string] $OutputDirectory = '',
+    [ValidateRange(320, 1920)][int] $ViewportWidth = 390
 )
 
 $ErrorActionPreference = "Stop"
@@ -174,8 +175,20 @@ foreach ($case in $cases) {
 
     $querySuffix = if ($null -ne $case.Query) { [string]$case.Query } else { "" }
     $fileUrl = ([System.Uri]::new($case.HtmlPath).AbsoluteUri) + $querySuffix
+    # Chromium's headless top-level window has a minimum width of 500px.
+    # An actual child viewport exercises Outlook-sized CSS/media queries.
+    $framePath = Join-Path $outputDir ($case.Name + '-viewport.html')
+    $frameHtml = @"
+<!doctype html><html><head><meta charset="utf-8"><title>PENDING</title>
+<style>html,body{margin:0;background:#f5f5f7}iframe{display:block;border:0;width:${ViewportWidth}px;height:100vh}</style></head>
+<body><iframe id="pane" title="Synthetic Outlook pane" src="$fileUrl"></iframe><pre id="result" hidden></pre>
+<script>window.addEventListener('message',event=>{if(event.source!==document.getElementById('pane').contentWindow||!event.data?.mailyHarness)return;document.title=event.data.title;document.getElementById('result').textContent=JSON.stringify(event.data.report);});</script></body></html>
+"@
+    [IO.File]::WriteAllText($framePath, $frameHtml, [Text.UTF8Encoding]::new($false))
+    $fileUrl = ([System.Uri]::new($framePath)).AbsoluteUri
 
     $domArgs = @(
+        "--window-size=$ViewportWidth,1000",
         "--headless=new",
         "--disable-gpu",
         "--allow-file-access-from-files",
@@ -205,7 +218,7 @@ foreach ($case in $cases) {
         "--disable-gpu",
         "--allow-file-access-from-files",
         "--virtual-time-budget=5000",
-        "--window-size=1440,1200",
+        "--window-size=$ViewportWidth,1000",
         "--screenshot=$($case.ScreenshotPath)",
         $fileUrl
     )

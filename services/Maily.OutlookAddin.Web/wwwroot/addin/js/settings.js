@@ -132,8 +132,9 @@
       return;
     }
 
-    const normalized = value === true ? "Enabled" : value === false ? "Disabled" : (value || "Blank");
-    el.textContent = `Recommended: ${normalized}`;
+    const empty = !value || String(value).toLowerCase() === "blank";
+    const normalized = value === true ? "On" : value === false ? "Off" : (empty ? (field === "model" ? "Automatic" : "None") : value);
+    el.textContent = `Default: ${normalized}`;
   }
 
   function formatTimestamp(value) {
@@ -460,10 +461,19 @@
       card.classList.toggle("has-dirty", isDirty);
     });
 
+    document.querySelectorAll("[data-reset-field]").forEach(button => {
+      const field = button.getAttribute("data-reset-field");
+      const current = state.values[field];
+      const baseline = state.defaults[field];
+      button.hidden = field === "stylePersonalizationEnabled"
+        ? toBool(current) === toBool(baseline)
+        : String(current || "") === String(baseline || "");
+      button.setAttribute("aria-label", `Reset ${field.replace(/([a-z])([A-Z])/g, "$1 $2")} to default`);
+    });
     byId("saveSettingsBtn").disabled = state.busy || !state.dirty;
     byId("settingsSaveNote").textContent = state.dirty
-      ? "You have unsaved changes. Save to make them active across Maily."
-      : "No unsaved changes.";
+      ? "Unsaved changes"
+      : "Settings saved";
   }
 
   function applyPayload(payload) {

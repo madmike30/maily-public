@@ -29,6 +29,19 @@ foreach ($pane in @("taskpane", "settings", "summary", "summary-read", "search",
     # Resolve current JS/CSS/assets without copying a stale product snapshot.
     $sourceUri = ([Uri]::new($sourceRoot + [IO.Path]::DirectorySeparatorChar)).AbsoluteUri
     $html = $html.Replace('<head>', "<head>`n  <meta http-equiv=`"Content-Security-Policy`" content=`"default-src 'none'; script-src file: 'unsafe-inline'; style-src file: 'unsafe-inline'; img-src file: data:; connect-src 'none'; form-action 'none'; frame-src 'none'`">`n  <base href=`"$sourceUri`">")
-    $html = $html.Replace('</body>', "<pre id=`"result`"></pre>`n<script>`n$assert`n</script>`n</body>")
+    $layoutCheck = @'
+setTimeout(() => {
+  const result = document.getElementById('result');
+  const horizontalOverflow = document.documentElement.scrollWidth > window.innerWidth + 1;
+  const hiddenLeaked = Array.from(document.querySelectorAll('[hidden]')).some(el => el.getClientRects().length > 0);
+  let report;
+  try { report = JSON.parse(result.textContent); } catch { return; }
+  report.layout = { horizontalOverflow, hiddenLeaked, width: window.innerWidth };
+  if (horizontalOverflow || hiddenLeaked) document.title = 'FAIL';
+  result.textContent = JSON.stringify(report, null, 2);
+  if (window.parent !== window) window.parent.postMessage({ mailyHarness: true, title: document.title, report }, '*');
+}, 4700);
+'@
+    $html = $html.Replace('</body>', "<pre id=`"result`" hidden></pre>`n<script>`n$assert`n$layoutCheck`n</script>`n</body>")
     [IO.File]::WriteAllText((Join-Path $outputRoot "$pane.html"), $html, [Text.UTF8Encoding]::new($false))
 }

@@ -74,6 +74,7 @@ builder.Services.AddMailyGenerationCore(options =>
 	options.PromptVersion = string.IsNullOrWhiteSpace(generationOptions.PromptVersion) ? "v1" : generationOptions.PromptVersion;
 });
 builder.Services.AddSingleton<OutlookSettingsCatalog>();
+builder.Services.AddHostedService<CodexCatalogWarmup>();
 builder.Services.AddSingleton<OutlookSearchSessionStore>();
 builder.Services.AddSingleton<OutlookSearchFetchCache>();
 var enableHttpLogging = builder.Environment.IsDevelopment() && !isWindowsService;

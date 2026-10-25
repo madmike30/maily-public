@@ -32,7 +32,7 @@ setTimeout(() => {
         result.advancedOpen &&
         result.focusedElementId === "customInstructions" &&
         result.saveDisabled &&
-        result.saveNote.indexOf("No unsaved changes") >= 0;
+        result.saveNote === "Settings saved" && document.getElementById("default-model").textContent === "Default: Automatic";
       document.getElementById("result").textContent = JSON.stringify(result, null, 2);
       document.title = pass ? "PASS" : "FAIL";
     }, 1800);

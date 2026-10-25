@@ -61,7 +61,7 @@
   function renderResults(items) {
     const container = byId("searchResults");
     if (!items || items.length === 0) {
-      container.textContent = "No ranked matches were returned for this search state.";
+      container.textContent = "No matching emails. Try a different phrase or broader filters.";
       window.MailyOffice.applyDirectionToElement(container, container.textContent);
       return;
     }
@@ -115,11 +115,11 @@
     renderResults(payload.results || []);
 
     const meta = payload.meta || {};
-    byId("searchMeta").textContent = `Stage: ${meta.queryStage || "-"} | Candidates: ${meta.candidateCount || 0} | Results: ${meta.resultCount || 0} | Model: ${meta.model || "-"} | Request: ${meta.requestId || "-"}`;
+    byId("searchMeta").textContent = `${meta.resultCount || 0} matching emails`;
     byId("searchEvidenceChip").textContent = meta.evidenceMode || "unknown";
     byId("searchTrustNote").textContent = meta.evidenceMode === "hydrated-top-results"
-      ? `Search narrowed to ${meta.candidateCount || 0} candidates and deepened the strongest ${meta.hydratedCount || 0} messages with full-message evidence.`
-      : `Search is currently based on ranked mailbox previews across ${meta.scopeLabel || "the selected scope"}. Apply filters to deepen the strongest messages.`;
+      ? `Based on the full text of ${meta.hydratedCount || 0} matching messages. Other messages may not be included.`
+      : `Based on message previews in ${meta.scopeLabel || "the selected folders"}. Refine your search to check the full text of the strongest matches.`;
 
     if (meta.warning) {
       byId("searchTrustNote").textContent += " " + meta.warning;
@@ -229,7 +229,7 @@
     byId("searchResults").textContent = "Run a search to see relevant emails.";
     byId("searchMeta").textContent = "No ranked results yet.";
     byId("searchEvidenceChip").textContent = "Waiting";
-    byId("searchTrustNote").textContent = "Maily will show whether the answer came from ranked previews or hydrated full-message evidence.";
+    byId("searchTrustNote").textContent = "Check the matching emails before relying on the answer. Search results may not cover all your mail.";
     byId("activeSearchChips").innerHTML = '<span class="chip-soft">No active search yet.</span>';
     byId("refineSearchBtn").disabled = true;
     renderSelect("searchSender", [], "", "Any sender");

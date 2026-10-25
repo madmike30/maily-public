@@ -22,6 +22,8 @@
   }
 
   function setBusy(isBusy) {
+    const auto = byId("briefingLanguageAutoBtn");
+    if (auto) auto.disabled = isBusy;
     ["refreshBriefingBtn", "copyBriefingBtn"].forEach((id) => {
       byId(id).disabled = isBusy;
     });
@@ -32,9 +34,16 @@
   }
 
   function renderLanguageButtons() {
+    const summary = byId("briefingLanguageSummary");
+    if (summary) summary.textContent = "Language: " + (state.languageChosenByUser ? state.selectedOutputLanguage : "Automatic");
+    const auto = byId("briefingLanguageAutoBtn");
+    if (auto) {
+      auto.classList.toggle("is-selected", !state.languageChosenByUser);
+      auto.setAttribute("aria-pressed", state.languageChosenByUser ? "false" : "true");
+    }
     ["English", "Hebrew"].forEach((language) => {
       const button = byId(`briefingLanguage${language}Btn`);
-      const isSelected = state.selectedOutputLanguage === language;
+      const isSelected = state.languageChosenByUser && state.selectedOutputLanguage === language;
       button.classList.toggle("is-selected", isSelected);
       button.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
@@ -157,6 +166,12 @@
         setOutputLanguage(language, { userSelected: true });
         await refreshBriefing();
       });
+    });
+    const auto = byId("briefingLanguageAutoBtn");
+    if (auto) auto.addEventListener("click", async () => {
+      state.languageChosenByUser = false;
+      renderLanguageButtons();
+      await refreshBriefing();
     });
     renderLanguageButtons();
     setStatus("Checking Maily setup...", "");

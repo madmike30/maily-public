@@ -31,7 +31,7 @@ public sealed class OutlookReplyGenerationService
 
 		var storedSettings = profileSettingsStore.Get(request.Client.MailboxAddress, request.UserPreferences.ProfileId).Settings;
 		var effectiveSettings = MergeSettings(storedSettings, request.UserPreferences);
-		ApplySenderIdentityFallback(request, effectiveSettings);
+		ApplyReplyAuthorIdentity(request, effectiveSettings);
 
 		var config = configLoader.Load(effectiveSettings.Model);
 		var systemPrompt = promptTemplateEngine.BuildSystemPrompt(request, effectiveSettings);
@@ -101,20 +101,9 @@ public sealed class OutlookReplyGenerationService
 		return merged;
 	}
 
-	private static void ApplySenderIdentityFallback(GenerateReplyRequest request, AddinProfileSettings settings)
+	private static void ApplyReplyAuthorIdentity(GenerateReplyRequest request, AddinProfileSettings settings)
 	{
-		var senderDisplayName = request.Compose.FromDisplayName?.Trim();
-		if (string.IsNullOrWhiteSpace(senderDisplayName))
-		{
-			senderDisplayName = request.Client.MailboxDisplayName?.Trim();
-		}
-
-		if (!string.IsNullOrWhiteSpace(senderDisplayName) &&
-			(string.IsNullOrWhiteSpace(settings.UserName) ||
-			 string.Equals(settings.UserName, "User", StringComparison.OrdinalIgnoreCase)))
-		{
-			settings.UserName = senderDisplayName;
-		}
+		settings.UserName = ReplyAuthorIdentity.Resolve(request).Name;
 	}
 
 	private static void Validate(GenerateReplyRequest request)

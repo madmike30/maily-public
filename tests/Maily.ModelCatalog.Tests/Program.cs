@@ -3,6 +3,7 @@ using Maily.Generation.Services;
 using System.Text.Json;
 using Maily.Generation.Contracts;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 if (args.Contains("exec"))
 {
@@ -71,6 +72,84 @@ await unavailable.GetAsync(config);
 var failure = await unavailable.GetAsync(config);
 Check(failing.Calls == 1 && failure.Status == "unavailable" && failure.Models.Count == 0, "failure backoff and honest empty catalog");
 Check(!JsonSerializer.Serialize(failure).Contains("PRIVATE"), "failure details redacted");
+var clock = new ManualClock();
+var delayed = new ControlledSource(models);
+var warmingCatalog = new CodexModelCatalog(delayed, clock);
+await warmingCatalog.GetAsync(config);
+clock.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(1));
+delayed.Block = true;
+var staleReads = Enumerable.Range(0, 8).Select(_ => warmingCatalog.GetAsync(config)).ToArray();
+await Task.WhenAll(staleReads).WaitAsync(TimeSpan.FromSeconds(1));
+Check(staleReads.All(t => t.Result.Status == "ready"), "recent successful catalog returns without waiting for refresh");
+await delayed.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+Check(delayed.Calls == 2, "expired catalog refresh is single flight");
+clock.Advance(TimeSpan.FromSeconds(30));
+var tooOld = warmingCatalog.GetAsync(config);
+await Task.Delay(30);
+Check(!tooOld.IsCompleted, "catalog older than thirty-second grace must await refresh");
+delayed.Release.TrySetResult();
+await tooOld.WaitAsync(TimeSpan.FromSeconds(1));
+Check(delayed.Calls == 2, "blocking reader reuses successful background refresh");
+var changedHome = new CodexRuntimeConfig { CodexExecutablePath = config.CodexExecutablePath, CodexHome = "synthetic-other-home" };
+await warmingCatalog.GetAsync(changedHome);
+Check(delayed.Calls == 3, "different connection never receives cached prior catalog");
+var errorClock = new ManualClock();
+var failingRefreshSource = new FakeSource(models);
+var failedRefreshCatalog = new CodexModelCatalog(failingRefreshSource, errorClock);
+await failedRefreshCatalog.GetAsync(config);
+failingRefreshSource.Fail = true;
+errorClock.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(1));
+Check((await failedRefreshCatalog.GetAsync(config)).Status == "ready", "only recent success can bridge a refresh");
+await Task.Delay(80);
+Check((await failedRefreshCatalog.GetAsync(config)).Status == "unavailable" && failingRefreshSource.Calls == 2,
+    "failed refresh becomes honest unavailable state with failure backoff");
+using (var cancelledRead = new CancellationTokenSource())
+{
+    cancelledRead.Cancel();
+    var cancelled = false;
+    try { await warmingCatalog.GetAsync(changedHome, cancelledRead.Token); } catch (OperationCanceledException) { cancelled = true; }
+    Check(cancelled, "cancelled requests do not start catalog refresh");
+}
+var startupSource = new ControlledSource(models) { Block = true };
+var shutdownClock = new ManualClock();
+var shutdownSource = new ControlledSource(models) { BlockCleanup = true };
+var shutdownServices = new ServiceCollection();
+shutdownServices.AddSingleton(_ => new CodexModelCatalog(shutdownSource, shutdownClock));
+var shutdownProvider = shutdownServices.BuildServiceProvider();
+var shutdownCatalog = shutdownProvider.GetRequiredService<CodexModelCatalog>();
+await shutdownCatalog.GetAsync(config);
+shutdownSource.Block = true;
+shutdownClock.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(1));
+await shutdownCatalog.GetAsync(config);
+await shutdownSource.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+shutdownClock.Advance(TimeSpan.FromSeconds(30));
+var queuedBeforeShutdown = shutdownCatalog.GetAsync(config);
+var shutdown = shutdownProvider.DisposeAsync().AsTask();
+await Task.WhenAny(shutdownSource.CancellationObserved.Task, Task.Delay(500));
+Check(shutdownSource.Cancelled, "DI shutdown cancels stale background refresh");
+Check(!shutdown.IsCompleted, "DI shutdown awaits source child-process cleanup");
+var queuedCancelled = false;
+try { await queuedBeforeShutdown.WaitAsync(TimeSpan.FromSeconds(1)); } catch (OperationCanceledException) { queuedCancelled = true; }
+Check(queuedCancelled, "shutdown cancels callers queued behind the stale refresh");
+shutdownSource.CleanupRelease.TrySetResult();
+await shutdown.WaitAsync(TimeSpan.FromSeconds(1));
+Check(shutdownSource.CleanupFinished, "stale refresh cleanup completes before disposal returns");
+var rejectedAfterShutdown = false;
+try { await shutdownCatalog.GetAsync(config); } catch (ObjectDisposedException) { rejectedAfterShutdown = true; }
+Check(rejectedAfterShutdown && shutdownSource.Calls == 2, "disposed catalog rejects new discovery");
+await shutdownCatalog.DisposeAsync();
+Check(shutdownSource.Calls == 2, "catalog disposal is idempotent");
+var startupOptions = new GenerationOptions { CodexExecutablePath = Environment.ProcessPath! };
+using (var warmup = new Maily.OutlookAddin.Web.Services.CodexCatalogWarmup(
+    new CodexModelCatalog(startupSource), new CodexRuntimeConfigLoader(new PathResolver(startupOptions), startupOptions)))
+{
+    await warmup.StartAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(1));
+    await startupSource.Started.Task.WaitAsync(TimeSpan.FromSeconds(1));
+    Check(startupSource.Calls == 1, "startup warms catalog without blocking backend availability");
+    using var stopTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+    await warmup.StopAsync(stopTimeout.Token);
+    Check(startupSource.Cancelled, "startup catalog warmup cancels on shutdown");
+}
 var testRoot = Path.Combine(Directory.GetCurrentDirectory(), "output", "single-rewrite-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(testRoot);
 var counter = Path.Combine(testRoot, "calls.txt");
@@ -89,4 +168,36 @@ sealed class FakeSource(IReadOnlyList<CodexModelInfo> models) : ICodexModelListS
     public int Calls; public bool Fail;
     public async Task<IReadOnlyList<CodexModelInfo>> ReadAsync(CodexRuntimeConfig config, CancellationToken token)
     { Interlocked.Increment(ref Calls); await Task.Delay(20, token); if (Fail) throw new Exception("PRIVATE"); return models; }
+}
+sealed class ManualClock : TimeProvider
+{
+    private DateTimeOffset now = DateTimeOffset.UtcNow;
+    public override DateTimeOffset GetUtcNow() => now;
+    public void Advance(TimeSpan duration) => now += duration;
+}
+sealed class ControlledSource(IReadOnlyList<CodexModelInfo> models) : ICodexModelListSource
+{
+    public int Calls; public bool Block; public bool Cancelled; public bool BlockCleanup; public bool CleanupFinished;
+    public TaskCompletionSource Started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource Release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource CancellationObserved = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource CleanupRelease = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public async Task<IReadOnlyList<CodexModelInfo>> ReadAsync(CodexRuntimeConfig config, CancellationToken token)
+    {
+        Interlocked.Increment(ref Calls);
+        if (Block)
+        {
+            Started.TrySetResult();
+            try { await Release.Task.WaitAsync(token); }
+            catch (OperationCanceledException)
+            {
+                Cancelled = true;
+                CancellationObserved.TrySetResult();
+                if (BlockCleanup) await CleanupRelease.Task;
+                CleanupFinished = true;
+                throw;
+            }
+        }
+        return models;
+    }
 }

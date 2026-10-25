@@ -32,11 +32,14 @@
   }
 
   function setBusy(isBusy) {
+    const auto = byId("summaryLanguageAutoBtn");
+    if (auto) auto.disabled = isBusy;
     ["summarizeBtn", "copySummaryBtn"].forEach((id) => {
       byId(id).disabled = isBusy;
     });
     byId("prepareSummaryReplyBtn").disabled = isBusy || !summaryBound;
     byId("applySummaryReplyBtn").disabled = isBusy || !replyReady;
+    byId("prepareSummaryReplyBtn").classList.toggle("primary", !replyReady);
     ["English", "Hebrew"].forEach(language => { byId(`summaryLanguage${language}Btn`).disabled = isBusy; });
     byId("replyActionChoices").querySelectorAll("input").forEach(input => { input.disabled = isBusy; });
   }
@@ -47,9 +50,16 @@
   }
 
   function renderLanguageButtons() {
+    const summary = byId("summaryLanguageSummary");
+    if (summary) summary.textContent = "Language: " + (state.languageChosenByUser ? state.selectedOutputLanguage : "Automatic");
+    const auto = byId("summaryLanguageAutoBtn");
+    if (auto) {
+      auto.classList.toggle("is-selected", !state.languageChosenByUser);
+      auto.setAttribute("aria-pressed", state.languageChosenByUser ? "false" : "true");
+    }
     ["English", "Hebrew"].forEach((language) => {
       const button = byId(`summaryLanguage${language}Btn`);
-      const isSelected = state.selectedOutputLanguage === language;
+      const isSelected = state.languageChosenByUser && state.selectedOutputLanguage === language;
       button.classList.toggle("is-selected", isSelected);
       button.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
@@ -135,7 +145,6 @@
     choices.replaceChildren();
     window.MailySummaryReply.actions(sections.actionItems).forEach(text => {
       const label = document.createElement("label");
-      label.style.display = "block";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.value = text;
@@ -143,6 +152,8 @@
         replyReady = false;
         byId("summaryReplyPanel").hidden = true;
         byId("applySummaryReplyBtn").disabled = true;
+          setBusy(false);
+          setStatus("Selection changed. Prepare a new reply to include it.", "");
       });
       label.append(checkbox, document.createTextNode(` ${text}`));
       choices.append(label);
@@ -306,6 +317,12 @@
         setOutputLanguage(language, { userSelected: true });
         await summarize();
       });
+    });
+    const auto = byId("summaryLanguageAutoBtn");
+    if (auto) auto.addEventListener("click", async () => {
+      state.languageChosenByUser = false;
+      renderLanguageButtons();
+      await summarize();
     });
     renderLanguageButtons();
     setStatus("Checking Maily setup...", "");

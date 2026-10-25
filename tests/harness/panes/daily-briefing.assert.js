@@ -11,7 +11,7 @@ setTimeout(() => {
         result.status.indexOf("Daily briefing ready.") >= 0 &&
         result.rightNow.indexOf("2 meetings") >= 0 &&
         result.nextFocus.indexOf("pricing reply") >= 0 &&
-        result.selectedLanguage === "English" &&
+        result.selectedLanguage === "Automatic" &&
         result.lastBriefingRequestLanguage === "";
       document.getElementById("result").textContent = JSON.stringify(result, null, 2);
       document.title = pass ? "PASS" : "FAIL";

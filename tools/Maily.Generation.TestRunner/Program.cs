@@ -685,6 +685,51 @@ Run("reply prompt preserves auto hebrew detection without explicit override", ()
 	AssertDoesNotContain("The user explicitly selected English", prompt);
 });
 
+Run("reply identity respects explicitly selected outgoing shared sender", () =>
+{
+    var engine = new PromptTemplateEngine(new PathResolver(new GenerationOptions { RepoRoot = Directory.GetCurrentDirectory() }));
+    var prompt = engine.BuildSystemPrompt(new() {
+        Client = new() { MailboxAddress = "alex@example.invalid", MailboxDisplayName = "Alex Example" },
+        Compose = new() { FromAddress = "support@example.invalid", FromDisplayName = "Example Support", FromIsComposeSender = true, BodyText = "From: Ada Other\nPlease help." }
+    }, new() { UserName = "Old Name" });
+    AssertContains("You are writing as: Example Support <support@example.invalid>", prompt);
+    AssertDoesNotContain("You are writing as: Ada Other", prompt);
+    AssertContains("Return only the reply body", prompt);
+});
+Run("reply identity survives stale settings and custom prompt without exchange", () =>
+{
+    var engine = new PromptTemplateEngine(new PathResolver(new GenerationOptions { RepoRoot = Directory.GetCurrentDirectory() }));
+    var request = new GenerateReplyRequest {
+        Client = new() { MailboxAddress = "alex@example.invalid", MailboxDisplayName = "Alex Example" },
+        Compose = new() { FromAddress = "ada@example.invalid", FromDisplayName = "Ada Other", BodyText = "Please approve this. Regards, Ada Other" }
+    };
+    foreach (var template in new[] { "", "Help {{userName}} write a reply." }) {
+        var prompt = engine.BuildSystemPrompt(request, new() { UserName = "Ada Other", SystemPromptOverride = template });
+        AssertContains("You are writing as: Alex Example <alex@example.invalid>", prompt);
+        AssertContains("Never write as the author of the incoming or quoted email", prompt);
+        AssertContains("Outlook preserves the existing signature separately", prompt);
+        AssertDoesNotContain("Help Ada Other write a reply", prompt);
+    }
+});
+RunAsync("reply service uses mailbox identity to remove generated duplicate signature", async () =>
+{
+    var root = Path.Combine(Directory.GetCurrentDirectory(), "output", "identity", Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(root);
+    var cli = Path.Combine(root, OperatingSystem.IsWindows() ? "fake.cmd" : "fake");
+    await File.WriteAllTextAsync(cli, OperatingSystem.IsWindows()
+        ? "@echo off\r\nmore > nul\r\necho I will confirm tomorrow.\r\necho Regards,\r\necho Alex Example\r\nexit /b 0\r\n"
+        : "#!/bin/sh\ncat > /dev/null\nprintf '%s\\n' 'I will confirm tomorrow.' 'Regards,' 'Alex Example'\n");
+    if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(cli, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    var options = new GenerationOptions { CodexExecutablePath = cli, CodexHome = Path.Combine(root, "fake-home"), SettingsFilePath = Path.Combine(root, "settings.json") };
+    Directory.CreateDirectory(options.CodexHome);
+    var paths = new PathResolver(options);
+    var service = new OutlookReplyGenerationService(new CodexRuntimeConfigLoader(paths, options), new PromptTemplateEngine(paths), new OracleResponsesGateway(NullLogger<OracleResponsesGateway>.Instance), new ProfileSettingsStore(paths), options);
+    var result = await service.GenerateReplyAsync(new() {
+        Client = new() { MailboxAddress = "alex@example.invalid", MailboxDisplayName = "Alex Example" },
+        Compose = new() { FromAddress = "ada@example.invalid", FromDisplayName = "Ada Other", BodyText = "Can you confirm?" }
+    }, "synthetic-author");
+    AssertEqual("I will confirm tomorrow.", result.Draft.Text);
+});
 Run("reply prompt writes as mailbox owner instead of incoming sender", () =>
 {
 	var engine = new PromptTemplateEngine(new PathResolver(new GenerationOptions

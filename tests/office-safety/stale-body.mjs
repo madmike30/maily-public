@@ -33,6 +33,27 @@ async function test(name, action) {
   catch (error) { results.push({ name, status: 'FAIL', error: String(error.stack) }); console.error(`FAIL ${name}: ${error.stack}`); }
 }
 const json = value => ({ ok: true, json: async () => value });
+await test('first-name-only signature is preserved instead of rewritten', async () => {
+  const f = fixture();
+  f.item.subject = { getAsync: cb => cb({status:'succeeded',value:'Re: Plan'}) };
+  for (const name of ['to','cc']) f.item[name] = { getAsync: cb => cb({status:'succeeded',value:[]}) };
+  f.state.body = 'I will confirm tomorrow.\n\nTest\nFrom: Ada <ada@example.invalid>\nSubject: Plan\nPlease confirm.\nRegards,\nAda';
+  const before = await f.office.getComposeSnapshot({userName:'Wrong Saved Name'}, 'generate-initial');
+  assert.equal(before.request.operation.currentDraft, 'I will confirm tomorrow.');
+  assert.equal(before.request.compose.fromIsComposeSender, true);
+  assert.equal(before.request.compose.fromDisplayName, 'Test Sender');
+  assert.equal(before.request.client.mailboxDisplayName, 'Test Sender');
+  assert.ok(before.composeState.preservedSuffix.includes('\nTest\n'));
+  await f.office.insertGeneratedDraft({text:'I will send confirmation tomorrow.',html:''}, {
+    expectedContext: before.composeContext, expectedBody:before.composeState.body,
+    expectedBodyType:'text', rewriteComposeBody:true,
+    originalUserDraftSegment:before.composeState.userDraftSegment,
+    preservedSuffix:before.composeState.preservedSuffix, seedText:before.composeState.userDraftText
+  });
+  assert.ok(f.state.body.includes('\nTest\nFrom: Ada'));
+  assert.ok(f.state.body.includes('Regards,\nAda'));
+  assert.equal(f.state.writes,1);
+});
 await test('compose summary separates incoming email from typed reply and signature', async () => {
   for (const [draft, incoming] of [['תודה אבדוק ואחזור מחר.', 'Please confirm the project schedule tomorrow.'], ['I will confirm tomorrow.', 'אנא אשרו את התוכנית המעודכנת מחר.']]) {
     const f = fixture();

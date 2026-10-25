@@ -42,8 +42,14 @@
   function setBusy(isBusy) {
     state.busy = isBusy;
     ["generateBtn", "insertBtn", "shorterBtn", "clearerBtn", "warmerBtn", "replyLanguageEnglishBtn", "replyLanguageHebrewBtn"].forEach(id => { byId(id).disabled = isBusy; });
+    const automaticButton = byId("replyLanguageAutoBtn");
+    if (automaticButton) automaticButton.disabled = isBusy;
+    byId("generateBtn").classList.toggle("primary", !state.pending);
+    byId("generateBtn").textContent = state.draft ? "Try another reply" : "Prepare reply";
+    byId("applyBtn").classList.toggle("primary", !!state.pending);
     byId("applyBtn").disabled = isBusy || !state.pending;
     byId("undoBtn").disabled = isBusy || !window.MailyOffice.canUndoGeneratedDraft || !window.MailyOffice.canUndoGeneratedDraft();
+    byId("undoBtn").hidden = byId("undoBtn").disabled;
   }
   function normalizeLanguage(value) {
     const language = String(value || "").trim().toLowerCase();
@@ -51,9 +57,16 @@
   }
 
   function renderLanguageButtons() {
+    const summary = byId("replyLanguageSummary");
+    if (summary) summary.textContent = "Language: " + (state.languageChosenByUser ? state.selectedOutputLanguage : "Automatic");
+    const auto = byId("replyLanguageAutoBtn");
+    if (auto) {
+      auto.classList.toggle("is-selected", !state.languageChosenByUser);
+      auto.setAttribute("aria-pressed", state.languageChosenByUser ? "false" : "true");
+    }
     ["English", "Hebrew"].forEach((language) => {
       const button = byId(`replyLanguage${language}Btn`);
-      const isSelected = state.selectedOutputLanguage === language;
+      const isSelected = state.languageChosenByUser && state.selectedOutputLanguage === language;
       button.classList.toggle("is-selected", isSelected);
       button.setAttribute("aria-pressed", isSelected ? "true" : "false");
     });
@@ -158,7 +171,7 @@
     if (state.busy) return;
     state.pending = null;
     setBusy(true);
-    setStatus("Building compose context...", "");
+    setStatus("Reading your current draft…", "");
     try {
       const generationContext = window.MailyOffice.captureComposeContext();
       await window.MailyOffice.ensureBackendAvailable();
@@ -186,7 +199,7 @@
       state.pending = { snapshot, context: generationContext };
       byId("seedPanel").open = !!snapshot.composeState.userDraftText;
       renderDraft();
-      setStatus("Preview ready. Compare it with your current reply, then choose Apply reply. Nothing has changed in Outlook.", "ok");
+      setStatus("Ready to review. Nothing has changed in Outlook.", "ok");
       await window.MailyOffice.logClientEvent("generate-complete", "ok", "Reply preview ready; no draft mutation.", "taskpane");
     } catch (error) {
       state.pending = null;
@@ -259,6 +272,16 @@
   }
 
   function wireActions() {
+    const auto = byId("replyLanguageAutoBtn");
+    if (auto) auto.addEventListener("click", () => {
+      if (state.busy) return;
+      state.pending = null;
+      state.languageChosenByUser = false;
+      state.selectedOutputLanguage = "Auto";
+      renderLanguageButtons();
+      setBusy(false);
+      setStatus("Language will follow your draft or email. Prepare a new reply to use it.", "ok");
+    });
     byId("generateBtn").addEventListener("click", () => generate(getRequestedGenerateMode()));
     byId("insertBtn").addEventListener("click", insertAgain);
     byId("applyBtn").addEventListener("click", applyReply);

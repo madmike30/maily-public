@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Maily Summary</title>
-  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <link rel="stylesheet" href="./styles.css?v=20261025ux1">
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <script defer src="./js/maily-office.js?v=20261025public1"></script>
-  <script defer src="./js/summary-reply.js?v=20261025public1"></script>
-  <script defer src="./js/summary.js?v=20261025public1"></script>
+  <script defer src="./js/maily-office.js?v=20261025ux1"></script>
+  <script defer src="./js/summary-reply.js?v=20261025ux1"></script>
+  <script defer src="./js/summary.js?v=20261025ux1"></script>
 </head>
 <body>
   <main class="shell">
@@ -20,20 +20,23 @@
         <span id="summarySurfaceChip" class="chip">Compose</span>
       </div>
       <nav class="pane-nav" aria-label="Maily tools">
-        <a href="./search.html?v=20261025public1">Search</a>
-        <a href="./daily-briefing.html?v=20261025public1">Briefing</a>
-        <a href="./settings.html?v=20261025public1">Settings</a>
+        <a href="./search.html?v=20261025ux1">Search</a>
+        <a href="./daily-briefing.html?v=20261025ux1">Briefing</a>
+        <a href="./settings.html?v=20261025ux1">Settings</a>
       </nav>
+      <details class="details-card"><summary id="summaryLanguageSummary">Language: Automatic</summary>
       <div class="language-picker" aria-label="Summary generation language">
         <span id="summaryLanguageLabel" class="language-picker-label">Summary language</span>
         <div class="language-pill-group" role="group" aria-labelledby="summaryLanguageLabel">
-          <button id="summaryLanguageEnglishBtn" class="language-pill is-selected" type="button" data-language="English" aria-pressed="true">English</button>
+          <button id="summaryLanguageAutoBtn" class="language-pill is-selected" type="button" aria-pressed="true">Automatic</button>
+          <button id="summaryLanguageEnglishBtn" class="language-pill" type="button" data-language="English" aria-pressed="false">English</button>
           <button id="summaryLanguageHebrewBtn" class="language-pill" type="button" data-language="Hebrew" aria-pressed="false">Hebrew</button>
         </div>
       </div>
+      </details>
     </header>
 
-    <p id="summaryStatus" class="status">Loading Outlook context...</p>
+    <p id="summaryStatus" class="status" role="status" aria-live="polite" aria-atomic="true">Loading Outlook context...</p>
 
     <section class="summary-stack">
       <article class="summary-card summary-card-strong">
@@ -52,9 +55,9 @@
 
     <section class="summary-card" aria-labelledby="replyFromSummaryTitle">
       <h3 id="replyFromSummaryTitle">Reply from this summary</h3>
-      <p>Choose any action items worth addressing. Your existing reply takes priority; suggestions do not confirm commitments.</p>
+      <p>Select what to address in your reply. Your existing draft takes priority; nothing is sent automatically.</p>
       <div id="replyActionChoices"></div>
-      <button id="prepareSummaryReplyBtn" type="button" disabled>Prepare reply</button>
+      <button id="prepareSummaryReplyBtn" class="primary" type="button" disabled>Prepare reply</button>
       <div id="summaryReplyPanel" hidden>
         <h3>Reply preview</h3>
         <div id="summaryReplyText" class="result-copy"></div>
@@ -64,7 +67,7 @@
     </section>
 
     <section class="actions">
-      <button id="summarizeBtn" class="primary" type="button">Refresh summary</button>
+      <button id="summarizeBtn" type="button">Refresh summary</button>
       <button id="copySummaryBtn" type="button">Copy summary</button>
     </section>
   </main>

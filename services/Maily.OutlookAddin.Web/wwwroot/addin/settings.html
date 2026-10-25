@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Maily Settings</title>
-  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <link rel="stylesheet" href="./styles.css?v=20261025ux1">
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <script defer src="./js/maily-office.js?v=20261025public1"></script>
-  <script defer src="./js/settings.js?v=20261025public1"></script>
-  <script defer src="./js/quick-tour.js?v=20261025public1"></script>
+  <script defer src="./js/maily-office.js?v=20261025ux1"></script>
+  <script defer src="./js/settings.js?v=20261025ux1"></script>
+  <script defer src="./js/quick-tour.js?v=20261025ux1"></script>
 </head>
 <body>
-  <main class="shell">
+  <main class="shell settings-shell">
     <header class="header">
       <div class="header-band">
         <div>
@@ -20,23 +20,11 @@
       </div>
     </header>
 
-    <p id="settingsStatus" class="status">Loading settings...</p>
+    <p id="settingsStatus" class="status" role="status" aria-live="polite" aria-atomic="true">Loading settings...</p>
 
     <input id="profileId" type="hidden" value="default">
 
-    <section id="quickTour" class="panel">
-      <h2 class="section-title">Get started</h2>
-      <p>Learn how to compose, choose settings, and optionally teach Maily your writing style.</p>
-      <button id="tourStart" type="button" class="ghost">Show quick tour</button>
-      <div id="tourPanel" hidden aria-live="polite">
-        <p id="tourProgress" class="field-help"></p>
-        <h3 id="tourTitle" tabindex="-1"></h3>
-        <p id="tourText"></p>
-        <button id="tourBack" type="button" class="ghost">Back</button>
-        <button id="tourNext" type="button">Next</button>
-        <button id="tourDismiss" type="button" class="ghost">Not now</button>
-      </div>
-    </section>
+
 
     <section class="panel">
       <h2 class="section-title">Writing defaults</h2>
@@ -106,6 +94,20 @@
       </div>
     </section>
 
+    <section id="quickTour" class="panel">
+      <h2 class="section-title">Get started</h2>
+      <p>Learn how to compose, choose settings, and optionally teach Maily your writing style.</p>
+      <button id="tourStart" type="button" class="ghost">Show quick tour</button>
+      <div id="tourPanel" hidden aria-live="polite">
+        <p id="tourProgress" class="field-help"></p>
+        <h3 id="tourTitle" tabindex="-1"></h3>
+        <p id="tourText"></p>
+        <button id="tourBack" type="button" class="ghost">Back</button>
+        <button id="tourNext" type="button">Next</button>
+        <button id="tourDismiss" type="button" class="ghost">Not now</button>
+      </div>
+    </section>
+
     <details id="personalStyleSection" class="details-card">
       <summary><strong>Personal writing style (optional)</strong></summary>
     <section class="panel">
@@ -116,7 +118,7 @@
           <strong>Use learned style from Sent Items</strong>
           <span>Recommended: enabled</span>
         </div>
-        <input id="stylePersonalizationEnabled" class="checkbox" type="checkbox" checked>
+        <input aria-label="Use my learned writing style" id="stylePersonalizationEnabled" class="checkbox" type="checkbox" checked>
       </div>
       <p id="help-stylePersonalizationEnabled" class="field-help"></p>
       <p id="error-stylePersonalizationEnabled" class="field-error"></p>
@@ -241,12 +243,11 @@
     </details>
 
     <section class="panel save-bar">
-      <p id="settingsSaveNote" class="save-note">No unsaved changes.</p>
-    </section>
-
-    <section class="actions">
+      <p id="settingsSaveNote" class="save-note" role="status" aria-live="polite">Settings saved</p>
+      <div class="actions">
       <button id="saveSettingsBtn" class="primary" type="button">Save settings</button>
-      <button id="resetAllBtn" type="button">Reset all to defaults</button>
+      <button id="resetAllBtn" type="button">Reset defaults</button>
+      </div>
     </section>
   </main>
 </body>

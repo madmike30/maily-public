@@ -305,6 +305,12 @@
         const results = [];
 
         results.push(runCase(
+          "first-name-signature-before-other-authors-thread",
+          '<p>I will confirm tomorrow.</p><p>Maily</p><div id="divRplyFwdMsg"><p>From: Ada Other</p><p>Please confirm.</p><p>Regards, Ada</p></div>',
+          { userDraftText: "I will confirm tomorrow.", canRewriteUserDraft: true, preservedSuffixExact: true,
+            preservedSuffixIncludes: ['<p>Maily</p>', 'Regards, Ada'], preservedSuffixExcludes: ['I will confirm tomorrow.'] }
+        ));
+        results.push(runCase(
           "typed-draft-signature-thread",
           [
             "<div>Yes please do it.</div>",

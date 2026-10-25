@@ -728,7 +728,7 @@
       return true;
     }
 
-    if (normalizedUserName && normalized.includes(normalizedUserName)) {
+    if (normalizedUserName && (normalized.includes(normalizedUserName) || isReplyAuthorFirstName(normalized, normalizedUserName))) {
       return true;
     }
 
@@ -741,6 +741,12 @@
     }
 
     return false;
+  }
+
+  function isReplyAuthorFirstName(text, userName) {
+    const firstName = normalizeSignatureText(userName).split(/\s+/)[0];
+    // Match only a standalone name, never its occurrence inside reply prose.
+    return firstName.length > 1 && normalizeSignatureText(text) === firstName;
   }
 
   function htmlToText(html) {
@@ -1309,7 +1315,7 @@
       return true;
     }
 
-    if (normalizedUserName && normalized.includes(normalizedUserName)) {
+    if (normalizedUserName && (normalized.includes(normalizedUserName) || isReplyAuthorFirstName(normalized, normalizedUserName))) {
       return true;
     }
 
@@ -1697,6 +1703,7 @@
           subject: subject || "",
           fromAddress: senderIdentity.emailAddress || mailboxAddress,
           fromDisplayName: senderIdentity.displayName || userIdentity.displayName || "",
+          fromIsComposeSender: true,
           to,
           cc,
           bodyType: isHtml ? "html" : "text",

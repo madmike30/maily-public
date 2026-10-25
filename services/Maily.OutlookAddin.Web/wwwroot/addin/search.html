@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Maily Search</title>
-  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <link rel="stylesheet" href="./styles.css?v=20261025ux1">
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <script defer src="./js/maily-office.js?v=20261025public1"></script>
-  <script defer src="./js/search.js?v=20261025public1"></script>
+  <script defer src="./js/maily-office.js?v=20261025ux1"></script>
+  <script defer src="./js/search.js?v=20261025ux1"></script>
 </head>
 <body>
   <main class="shell">
@@ -19,14 +19,15 @@
       </div>
     </header>
 
-    <p id="searchStatus" class="status">Loading mailbox context...</p>
+    <p id="searchStatus" class="status" role="status" aria-live="polite" aria-atomic="true">Loading mailbox context...</p>
 
     <section class="panel search-toolbar">
       <label>
         Search query
         <input id="searchQuery" type="text" placeholder="e.g. meeting follow-up">
       </label>
-      <div class="search-filters-grid">
+      <details class="details-card"><summary>Filters</summary>
+      <div class="search-filters-grid details-body">
         <label>
           Mail scope
           <select id="searchScope"></select>
@@ -46,6 +47,7 @@
           </select>
         </label>
       </div>
+      </details>
       <div class="actions">
         <button id="searchBtn" class="primary" type="button">Start search</button>
         <button id="refineSearchBtn" type="button" disabled>Apply filters</button>
@@ -63,7 +65,7 @@
       <div id="activeSearchChips" class="chip-row">
         <span class="chip-soft">No active search yet.</span>
       </div>
-      <p id="searchTrustNote" class="trust-note">Maily will show whether the answer came from ranked previews or hydrated full-message evidence.</p>
+      <p id="searchTrustNote" class="trust-note">Check the matching emails before relying on the answer. Search results may not cover all your mail.</p>
     </section>
 
     <section class="summary-grid">

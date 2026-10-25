@@ -227,6 +227,11 @@ internal sealed class SetupForm : Form
 	private readonly SetupOptions options;
 	private readonly string packageMode;
 	private readonly Label statusLabel = new();
+	private Label headingLabel = null!;
+	private Label subtitleLabel = null!;
+	private Label prerequisitesLabel = null!;
+	private LinkLabel detailsToggle = null!;
+	private int presentationHeight = 570;
 	private readonly TextBox detailsBox = new();
 	private readonly ProgressBar progressBar = new();
 	private readonly Button primaryButton = new();
@@ -275,6 +280,7 @@ internal sealed class SetupForm : Form
 			SetCheck("install", "Complete");
 			SetCheck("connect", "Waiting for Outlook");
 			progressBar.Value = 66;
+			UpdatePresentation();
 		}
 		catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException) { }
 	}
@@ -294,8 +300,9 @@ internal sealed class SetupForm : Form
 		Font = new Font("Segoe UI", 10F);
 		BackColor = Color.White;
 
-		var title = new Label
+		var title = headingLabel = new Label
 		{
+			Name = "setupHeading",
 			Text = options.Uninstall ? "Remove Maily" : installedVersion is null ? "Welcome to Maily" : "Update Maily",
 			Font = new Font("Segoe UI Semibold", 17F, FontStyle.Bold),
 			AutoSize = false,
@@ -304,7 +311,7 @@ internal sealed class SetupForm : Form
 		};
 		Controls.Add(title);
 
-		var subtitle = new Label
+		var subtitle = subtitleLabel = new Label
 		{
 			Text = options.Uninstall
 				? (IsHostedPackage
@@ -319,7 +326,7 @@ internal sealed class SetupForm : Form
 		};
 		Controls.Add(subtitle);
 
-		var prerequisites = new Label
+		var prerequisites = prerequisitesLabel = new Label
 		{
 			Text = options.Uninstall
 				? (IsHostedPackage
@@ -349,6 +356,8 @@ internal sealed class SetupForm : Form
 		Controls.Add(removeTrustedCertificateCheckBox);
 
 		responsibilityCheckBox.Text = "I understand AI can make mistakes. I am responsible for reviewing its output and following my organization's data and AI policies.";
+		responsibilityCheckBox.AccessibleName = "Review AI responsibility acknowledgement";
+		responsibilityCheckBox.TabIndex = 0;
 		responsibilityCheckBox.Location = new Point(30, 164);
 		responsibilityCheckBox.Size = new Size(700, 62);
 		responsibilityCheckBox.Visible = !options.Uninstall;
@@ -365,9 +374,12 @@ internal sealed class SetupForm : Form
 		foreach (var row in new[] { ("prepare", "1. Check this PC and your sign-in"), ("install", "2. Install Maily"), ("connect", "3. Connect Outlook") })
 			checks.Items.Add(new ListViewItem(new[] { row.Item2, "Waiting" }) { Name = row.Item1 });
 		checks.Visible = !options.Uninstall;
+		checks.AccessibleName = "Installation stages";
+		checks.TabIndex = 1;
 		Controls.Add(checks);
 
 		statusLabel.Text = "Ready.";
+		statusLabel.AccessibleName = "Setup status";
 		statusLabel.AutoSize = false;
 		statusLabel.Location = new Point(30, 360);
 		statusLabel.Size = new Size(700, 62);
@@ -379,14 +391,16 @@ internal sealed class SetupForm : Form
 		progressBar.Style = ProgressBarStyle.Continuous;
 		Controls.Add(progressBar);
 
-		var detailsToggle = new LinkLabel { Text = "Show technical details", Location = new Point(30, 458), Size = new Size(240, 28) };
-		detailsToggle.LinkClicked += (_, _) => { detailsBox.Visible = !detailsBox.Visible; detailsToggle.Text = detailsBox.Visible ? "Hide technical details" : "Show technical details"; ClientSize = new Size(760, detailsBox.Visible ? 770 : 570); };
+		detailsToggle = new LinkLabel { Text = "Show technical details", AccessibleName = "Show or hide setup details", TabIndex = 2, Location = new Point(30, 458), Size = new Size(240, 28) };
+		detailsToggle.LinkClicked += (_, _) => { detailsBox.Visible = !detailsBox.Visible; detailsToggle.Text = detailsBox.Visible ? "Hide technical details" : "Show technical details"; ClientSize = new Size(760, presentationHeight + (detailsBox.Visible ? 200 : 0)); };
 		Controls.Add(detailsToggle);
 		detailsBox.Location = new Point(30, 580);
 		detailsBox.Size = new Size(700, 155);
 		detailsBox.BackColor = Color.FromArgb(247, 249, 252);
 		detailsBox.Multiline = true;
 		detailsBox.ReadOnly = true;
+		detailsBox.AccessibleName = "Technical setup details";
+		detailsBox.TabIndex = 5;
 		detailsBox.Visible = false;
 		detailsBox.ScrollBars = ScrollBars.Vertical;
 		detailsBox.Text = options.Uninstall
@@ -401,14 +415,80 @@ internal sealed class SetupForm : Form
 		primaryButton.BackColor = Color.FromArgb(32, 86, 155);
 		primaryButton.ForeColor = Color.White;
 		primaryButton.FlatStyle = FlatStyle.Flat;
+		primaryButton.TabIndex = 3;
+		primaryButton.AccessibleName = primaryButton.Text;
 		primaryButton.Click += async (_, _) => await ContinueAsync();
 		Controls.Add(primaryButton);
 
 		closeButton.Text = "Close";
+		closeButton.AccessibleName = "Close setup";
+		closeButton.TabIndex = 4;
 		closeButton.Location = new Point(638, 510);
 		closeButton.Size = new Size(92, 34);
 		closeButton.Click += (_, _) => Close();
 		Controls.Add(closeButton);
+		AcceptButton = primaryButton;
+		CancelButton = closeButton;
+		if (options.Uninstall) SetCompactLayout(true);
+	}
+
+	private void SetCompactLayout(bool removal)
+	{
+		presentationHeight = removal ? 420 : 460;
+		checks.Top = 126;
+		statusLabel.Top = removal ? 178 : 250;
+		progressBar.Top = removal ? 264 : 328;
+		detailsToggle.Top = removal ? 290 : 350;
+		primaryButton.Top = closeButton.Top = presentationHeight - 60;
+		detailsBox.Top = presentationHeight + 10;
+		ClientSize = new Size(760, presentationHeight + (detailsBox.Visible ? 200 : 0));
+	}
+
+	private void UpdatePresentation()
+	{
+		primaryButton.AccessibleName = primaryButton.Text;
+		closeButton.Visible = primaryButton.Text != "Close";
+		CancelButton = closeButton.Visible ? closeButton : primaryButton;
+		if (options.Uninstall)
+		{
+			headingLabel.Text = flow.LocalRemovalComplete ? "Removed from this PC" : "Removal needs attention";
+			subtitleLabel.Text = flow.LocalRemovalComplete
+				? "The Outlook account entry may still remain. Finish removal to review the next step."
+				: "Your settings and sign-in are preserved. Review the details before trying again.";
+			progressBar.Style = ProgressBarStyle.Continuous;
+			progressBar.Value = flow.LocalRemovalComplete ? 100 : 0;
+			progressBar.Visible = !flow.LocalRemovalComplete;
+			return;
+		}
+		if (flow.ApplicationInstalled || flow.NextAction == SetupAction.Close)
+		{
+			responsibilityCheckBox.Visible = false;
+			prerequisitesLabel.Visible = false;
+			SetCompactLayout(false);
+		}
+		headingLabel.Text = flow.NextAction switch
+		{
+			SetupAction.OpenOutlook => "Maily is ready",
+			SetupAction.Connect => flow.ApplicationInstalled ? "One step to go" : "Connect Outlook first",
+			SetupAction.CheckConnection => "Check your Outlook connection",
+			SetupAction.Close => "Your connection needs help",
+			_ => "Setup needs attention"
+		};
+		subtitleLabel.Text = flow.NextAction switch
+		{
+			SetupAction.OpenOutlook => "Open Outlook to start. You stay in control of every reply.",
+			SetupAction.Connect => flow.ApplicationInstalled ? "Maily is installed. Connect the Microsoft account you use in Outlook." : "Your Outlook connection needs attention before installation can continue.",
+			SetupAction.CheckConnection => "Maily is installed. The next step opens Outlook and checks that Maily is available.",
+			SetupAction.Close => "Your administrator or Maily support can help with this Outlook connection.",
+			_ => "Follow the guidance below. Your settings and sign-in are preserved."
+		};
+		if (flow.NextAction == SetupAction.OpenOutlook)
+		{
+			foreach (var stage in new[] { "prepare", "install", "connect" }) SetCheck(stage, "Complete");
+			progressBar.Style = ProgressBarStyle.Continuous;
+			progressBar.Value = 100;
+		}
+		progressBar.Visible = flow.NextAction is not SetupAction.OpenOutlook and not SetupAction.Close;
 	}
 
 	private async Task ContinueAsync()
@@ -444,13 +524,13 @@ internal sealed class SetupForm : Form
 	internal Form CreateConnectionGuide(Func<CancellationToken, Task<OutlookConnectionResult>>? connector = null)
 	{
 		var allowed = flow.CanConnectAutomatically;
-		var guide = new Form { Text = "Connect Maily to Outlook", StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(650, 360), Font = Font, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false };
+		var guide = new Form { Text = "Connect Maily to Outlook", StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(650, 360), Font = Font, BackColor = Color.White, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, AutoScaleMode = AutoScaleMode.Font, AutoScroll = true };
 		guide.Controls.Add(new Label { Text = flow.RepairRequired ? "Update your Outlook connection" : "Connect Maily to your Outlook account", Font = new Font(Font, FontStyle.Bold), Location = new Point(24, 20), Size = new Size(600, 40) });
-		guide.Controls.Add(new Label { Text = allowed ? "Sign in with the Microsoft account you use in Outlook. Microsoft will ask you to approve access. If your account is unsupported, use the manual steps below." : "This connection requires administrator or Maily support. Setup will not change an organization-managed or unknown connection.", Location = new Point(24, 68), Size = new Size(600, 65) });
-		var signIn = new Button { Name = "connectionSignIn", Text = "Sign in and connect", Location = new Point(24, 140), Size = new Size(210, 35), Enabled = allowed };
-		var cancel = new Button { Name = "connectionCancel", Text = "Cancel connection", Location = new Point(250, 140), Size = new Size(180, 35), Visible = false };
-		var connectionStatus = new Label { Name = "connectionStatus", Text = "Your Outlook connection is checked separately after Microsoft finishes.", Location = new Point(24, 190), Size = new Size(600, 55), AutoEllipsis = true };
-		var fallback = new LinkLabel { Text = "Other ways to connect", Location = new Point(24, 250), Size = new Size(280, 25), Enabled = allowed };
+		guide.Controls.Add(new Label { Text = allowed ? "Sign in with the Microsoft account you use in Outlook and review Microsoft's permission request. If you cannot connect, open Other ways to connect." : "This connection requires administrator or Maily support. Setup will not change an organization-managed or unknown connection.", Location = new Point(24, 68), Size = new Size(600, 65) });
+		var signIn = new Button { Name = "connectionSignIn", Text = "Sign in and connect", AccessibleName = "Sign in to Microsoft and connect Outlook", TabIndex = 0, Location = new Point(24, 140), Size = new Size(210, 35), Enabled = allowed, BackColor = Color.FromArgb(32, 86, 155), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+		var cancel = new Button { Name = "connectionCancel", Text = "Cancel connection", AccessibleName = "Cancel Microsoft connection", TabIndex = 1, Location = new Point(250, 140), Size = new Size(180, 35), Visible = false };
+		var connectionStatus = new Label { Name = "connectionStatus", AccessibleName = "Connection status", Text = "After Microsoft finishes, choose Check connection to verify Maily in Outlook.", Location = new Point(24, 190), Size = new Size(600, 55), AutoEllipsis = true };
+		var fallback = new LinkLabel { Text = "Other ways to connect", TabIndex = 2, Location = new Point(24, 250), Size = new Size(280, 25), Enabled = allowed };
 		var manual = new Panel { Location = new Point(24, 280), Size = new Size(600, 220), Visible = false };
 		manual.Controls.Add(new Label { Text = flow.ConnectionInstructions, Location = Point.Empty, Size = new Size(600, 160) });
 		var open = new Button { Text = "Open Outlook add-ins", Location = new Point(0, 175), Size = new Size(210, 35) };
@@ -458,8 +538,13 @@ internal sealed class SetupForm : Form
 		var copy = new Button { Text = "Copy setup file", Location = new Point(225, 175), Size = new Size(170, 35) };
 		copy.Click += (_, _) => { var path = Path.Combine(AppContext.BaseDirectory, "payload", "addin", "manifest.xml"); if (!File.Exists(path)) { MessageBox.Show(guide, "The setup file is missing. Download a complete Maily package."); return; } try { Clipboard.SetText(path); copy.Text = "Copied"; } catch (System.Runtime.InteropServices.ExternalException) { MessageBox.Show(guide, "Could not copy the setup file location. Try again."); } };
 		manual.Controls.AddRange(new Control[] { open, copy });
-		var check = new Button { Text = flow.ApplicationInstalled ? "Check connection" : "Continue setup", DialogResult = DialogResult.OK, Location = new Point(415, 305), Size = new Size(205, 35), Enabled = allowed };
-		fallback.LinkClicked += (_, _) => { manual.Visible = !manual.Visible; guide.ClientSize = new Size(650, manual.Visible ? 570 : 360); check.Top = manual.Visible ? 520 : 305; fallback.Text = manual.Visible ? "Hide manual steps" : "Other ways to connect"; };
+		var check = new Button { Text = flow.ApplicationInstalled ? "Check connection" : "Continue setup", DialogResult = DialogResult.OK, TabIndex = 4, Location = new Point(415, 305), Size = new Size(205, 35), Enabled = allowed };
+		check.AccessibleName = check.Text;
+		if (!flow.ApplicationInstalled) connectionStatus.Text = "After Microsoft finishes, choose Continue setup. Outlook availability is verified separately.";
+		var dismiss = new Button { Name = "connectionDismiss", Text = "Not now", AccessibleName = "Return to setup", DialogResult = DialogResult.Cancel, TabIndex = 5, Location = new Point(24, 305), Size = new Size(110, 35) };
+		fallback.LinkClicked += (_, _) => { manual.Visible = !manual.Visible; guide.ClientSize = new Size(650, manual.Visible ? 570 : 360); dismiss.Top = check.Top = manual.Visible ? 520 : 305; fallback.Text = manual.Visible ? "Hide manual steps" : "Other ways to connect"; };
+		guide.AcceptButton = check;
+		guide.CancelButton = dismiss;
 		CancellationTokenSource? connectionCancellation = null;
 		var connecting = false;
 		var closeAfterCancel = false;
@@ -486,7 +571,7 @@ internal sealed class SetupForm : Form
 				if (closeAfterCancel) guide.Close();
 			}
 		};
-		guide.Controls.AddRange(new Control[] { signIn, cancel, connectionStatus, fallback, manual, check });
+		guide.Controls.AddRange(new Control[] { signIn, cancel, connectionStatus, fallback, manual, check, dismiss });
 		return guide;
 	}
 
@@ -670,6 +755,7 @@ internal sealed class SetupForm : Form
 		primaryButton.Text = flow.PrimaryText;
 		if (applicationInstalled) SetCheck("install", "Complete");
 		if (exitCode is 20 or 21 or 23) SetCheck("connect", "Needs your action");
+		UpdatePresentation();
 	}
 
 	private void SaveConnectionProgress()
@@ -692,6 +778,7 @@ internal sealed class SetupForm : Form
 		flow.RemovalFinished(exitCode);
 		statusLabel.Text = flow.Message;
 		primaryButton.Text = flow.LocalRemovalComplete ? "Finish removal" : "Try again";
+		UpdatePresentation();
 	}
 
 	private static string PackageFingerprint() => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "SHA256SUMS.json"))));
@@ -718,6 +805,7 @@ internal sealed class SetupForm : Form
 				checks.Items["connect"]!.ForeColor = Color.DarkGreen;
 				progressBar.Value = 100;
 			}
+			UpdatePresentation();
 		}
 		catch (Exception ex) { statusLabel.Text = "Outlook verification failed."; AppendDetails(ex.Message); }
 		finally { busy = false; applyingChanges = false; RestoreReadyControls(); }

@@ -15,7 +15,7 @@ history.replaceState(null, "", location.pathname + "?surface=read");
         result.chip.indexOf("Read") >= 0 &&
         result.exec.indexOf("synthetic training workshop") >= 0 &&
         result.actionItems.indexOf("Review the training resources.") >= 0 &&
-        ["English", ""].includes(result.selectedLanguage) &&
+        result.selectedLanguage === "Automatic" &&
         result.lastSummaryRequestLanguage === "";
       document.getElementById("result").textContent = JSON.stringify(result, null, 2);
       document.title = pass ? "PASS" : "FAIL";
