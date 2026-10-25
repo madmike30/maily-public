@@ -1,0 +1,39 @@
+name: Synthetic Windows verification
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    if: ${{ vars.MAILY_HOSTED_CI_ENABLED == 'true' }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare comparison ref
+        run: |
+          if ((git branch --show-current) -ne 'main') {
+            git branch main origin/main
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+      - name: Build and test mocked boundaries
+        run: ./scripts/test-fix-maily.ps1 -DotnetPath (Get-Command dotnet).Source
+      - name: Preserve synthetic verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-verification-${{ github.run_id }}-${{ github.run_attempt }}
+          path: output/
+          if-no-files-found: warn

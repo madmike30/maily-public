@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+  xsi:type="MailApp">
+  <Id>683ea353-6d71-4315-afd4-147e968605a9</Id>
+  <Version>1.3.1.0</Version>
+  <ProviderName>Maily</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Maily Reply Assistant" />
+  <Description DefaultValue="Generate polished reply drafts directly from Outlook compose." />
+  <IconUrl DefaultValue="https://localhost:7097/addin/assets/icon-32.png?v=1.2.9" />
+  <HighResolutionIconUrl DefaultValue="https://localhost:7097/addin/assets/icon-80.png?v=1.2.9" />
+  <SupportUrl DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025public1" />
+  <AppDomains>
+    <AppDomain>https://localhost:7097</AppDomain>
+    <AppDomain>http://localhost:5289</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Mailbox" />
+  </Hosts>
+  <Requirements>
+    <Sets>
+      <Set Name="Mailbox" MinVersion="1.8" />
+    </Sets>
+  </Requirements>
+  <FormSettings>
+    <Form xsi:type="ItemEdit">
+      <DesktopSettings>
+        <SourceLocation DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025public1" />
+      </DesktopSettings>
+    </Form>
+  </FormSettings>
+  <Permissions>ReadWriteItem</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Edit" />
+  </Rule>
+  <DisableEntityHighlighting>false</DisableEntityHighlighting>
+  <VersionOverrides
+    xmlns="http://schemas.microsoft.com/office/mailappversionoverrides"
+    xsi:type="VersionOverridesV1_0">
+    <VersionOverrides
+      xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
+      xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.8">
+          <bt:Set Name="Mailbox" />
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="Maily.Compose.Group">
+                  <Label resid="Maily.Compose.Group.Label" />
+                  <Control xsi:type="Button" id="Maily.Compose.GenerateButton">
+                    <Label resid="Maily.Compose.Generate.Label" />
+                    <Supertip>
+                      <Title resid="Maily.Compose.Generate.Label" />
+                      <Description resid="Maily.Compose.Gen.Desc" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Maily.Icon16" />
+                      <bt:Image size="32" resid="Maily.Icon32" />
+                      <bt:Image size="80" resid="Maily.Icon80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Maily.Taskpane.Url" />
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="Maily.Compose.SummaryButton">
+                    <Label resid="Maily.Compose.Summary.Label" />
+                    <Supertip>
+                      <Title resid="Maily.Compose.Summary.Label" />
+                      <Description resid="Maily.Compose.Sum.Desc" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Maily.Icon16" />
+                      <bt:Image size="32" resid="Maily.Icon32" />
+                      <bt:Image size="80" resid="Maily.Icon80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Maily.Summary.Url" />
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="Maily.Compose.SettingsButton">
+                    <Label resid="Maily.Compose.Settings.Label" />
+                    <Supertip>
+                      <Title resid="Maily.Compose.Settings.Label" />
+                      <Description resid="Maily.Compose.Set.Desc" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Maily.Icon16" />
+                      <bt:Image size="32" resid="Maily.Icon32" />
+                      <bt:Image size="80" resid="Maily.Icon80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Maily.Settings.Url" />
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="Maily.Read.Group">
+                  <Label resid="Maily.Read.Group.Label" />
+                  <Control xsi:type="Button" id="Maily.Read.SummaryButton">
+                    <Label resid="Maily.Read.Summary.Label" />
+                    <Supertip>
+                      <Title resid="Maily.Read.Summary.Label" />
+                      <Description resid="Maily.Read.Sum.Desc" />
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Maily.Icon16" />
+                      <bt:Image size="32" resid="Maily.Icon32" />
+                      <bt:Image size="80" resid="Maily.Icon80" />
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Maily.ReadSummary.Url" />
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Maily.Icon16" DefaultValue="https://localhost:7097/addin/assets/icon-16.png?v=1.2.9" />
+          <bt:Image id="Maily.Icon32" DefaultValue="https://localhost:7097/addin/assets/icon-32.png?v=1.2.9" />
+          <bt:Image id="Maily.Icon80" DefaultValue="https://localhost:7097/addin/assets/icon-80.png?v=1.2.9" />
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Maily.Taskpane.Url" DefaultValue="https://localhost:7097/addin/taskpane.html?v=20261025public1" />
+          <bt:Url id="Maily.Summary.Url" DefaultValue="https://localhost:7097/addin/summary.html?v=20261025public1" />
+          <bt:Url id="Maily.ReadSummary.Url" DefaultValue="https://localhost:7097/addin/summary-read.html?v=20261025public1" />
+          <bt:Url id="Maily.Search.Url" DefaultValue="https://localhost:7097/addin/search.html?v=20261025public1" />
+          <bt:Url id="Maily.Settings.Url" DefaultValue="https://localhost:7097/addin/settings.html?v=20261025public1" />
+          <bt:Url id="Maily.Briefing.Url" DefaultValue="https://localhost:7097/addin/daily-briefing.html?v=20261025public1" />
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="Maily.Compose.Group.Label" DefaultValue="Maily" />
+          <bt:String id="Maily.Read.Group.Label" DefaultValue="Maily" />
+          <bt:String id="Maily.Compose.Generate.Label" DefaultValue="Generate reply" />
+          <bt:String id="Maily.Compose.Summary.Label" DefaultValue="Summary" />
+          <bt:String id="Maily.Compose.Settings.Label" DefaultValue="Settings" />
+          <bt:String id="Maily.Read.Summary.Label" DefaultValue="Summary" />
+          <bt:String id="Maily.Read.Search.Label" DefaultValue="Search" />
+          <bt:String id="Maily.Read.Briefing.Label" DefaultValue="Briefing" />
+          <bt:String id="Maily.Read.Settings.Label" DefaultValue="Settings" />
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="Maily.Compose.Gen.Desc" DefaultValue="Generate a high-quality reply for the current draft." />
+          <bt:String id="Maily.Compose.Sum.Desc" DefaultValue="Summarize the current thread or draft context." />
+          <bt:String id="Maily.Compose.Set.Desc" DefaultValue="Configure reply style, language, and add-in setup values." />
+          <bt:String id="Maily.Read.Sum.Desc" DefaultValue="Summarize the opened email thread." />
+          <bt:String id="Maily.Read.Search.Desc" DefaultValue="Search your mailbox by topic, people, or commitments." />
+          <bt:String id="Maily.Read.Briefing.Desc" DefaultValue="See today's meetings, open follow-ups, and important unread emails." />
+          <bt:String id="Maily.Read.Settings.Desc" DefaultValue="Configure Maily defaults, generation options, and prompt controls." />
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
+  </VersionOverrides>
+</OfficeApp>

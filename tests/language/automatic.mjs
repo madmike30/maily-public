@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const context=vm.createContext({window:{location:{hostname:'localhost',search:''}},URLSearchParams});
+vm.runInContext(fs.readFileSync('services/Maily.OutlookAddin.Web/wwwroot/addin/js/maily-office.js','utf8'),context);
+const detect=context.window.MailyOffice.detectPreferredLanguage;
+assert.equal(detect('Hello team, please review the project plan with דוד tomorrow.'),'Auto');
+assert.equal(detect('Bonjour, merci pour votre message.'),'Auto');
+assert.equal(detect('תודה על העדכון אבדוק ואחזור מחר.','Long English quoted content'),'Hebrew');
+assert.equal(detect('<style>English color family long stylesheet</style><p>תודה אבדוק מחר</p>'),'Hebrew');
+assert.equal(detect('תודה אבדוק מחר\n-- \nEnglish Company International Customer Services'),'Hebrew');
+assert.equal(detect('I will confirm tomorrow.\nFrom: synthetic@example.invalid\nשלום שלום שלום שלום שלום'),'Auto');
+console.log('PASS automatic language: 6 synthetic helper checks');

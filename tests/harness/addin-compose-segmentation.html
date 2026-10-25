@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PENDING</title>
+  <script defer src="../../services/Maily.OutlookAddin.Web/wwwroot/addin/js/maily-office.js"></script>
+</head>
+<body>
+  <pre id="result">pending</pre>
+  <script>
+    (function () {
+      function assert(condition, message, errors) {
+        if (!condition) {
+          errors.push(message);
+        }
+      }
+
+      function runCase(name, body, expected) {
+        const actual = window.MailyOffice.__test.splitHtmlComposeSegments(body, {
+          userName: "Maily Tester"
+        }, "maily.tester@example.com");
+        const errors = [];
+
+        assert(actual.userDraftText === expected.userDraftText, `${name}: expected userDraftText "${expected.userDraftText}" but got "${actual.userDraftText}"`, errors);
+        assert(actual.canRewriteUserDraft === expected.canRewriteUserDraft, `${name}: expected canRewriteUserDraft ${expected.canRewriteUserDraft} but got ${actual.canRewriteUserDraft}`, errors);
+        assert(actual.preservedSuffixExact === expected.preservedSuffixExact, `${name}: expected preservedSuffixExact ${expected.preservedSuffixExact} but got ${actual.preservedSuffixExact}`, errors);
+
+        (expected.preservedSuffixIncludes || []).forEach((snippet) => {
+          assert((actual.preservedSuffix || "").indexOf(snippet) >= 0, `${name}: preserved suffix missing "${snippet}"`, errors);
+        });
+
+        (expected.preservedSuffixExcludes || []).forEach((snippet) => {
+          assert((actual.preservedSuffix || "").indexOf(snippet) < 0, `${name}: preserved suffix unexpectedly contains "${snippet}"`, errors);
+        });
+
+        return {
+          name,
+          actual,
+          errors
+        };
+      }
+
+      function runTextCase(name, body, expected) {
+        const actual = window.MailyOffice.__test.splitTextComposeSegments(body, {
+          userName: "Maily Tester"
+        }, "maily.tester@example.com");
+        const errors = [];
+
+        assert(actual.userDraftText === expected.userDraftText, `${name}: expected userDraftText "${expected.userDraftText}" but got "${actual.userDraftText}"`, errors);
+        assert(actual.canRewriteUserDraft === expected.canRewriteUserDraft, `${name}: expected canRewriteUserDraft ${expected.canRewriteUserDraft} but got ${actual.canRewriteUserDraft}`, errors);
+
+        (expected.preservedSuffixIncludes || []).forEach((snippet) => {
+          assert((actual.preservedSuffix || "").indexOf(snippet) >= 0, `${name}: preserved suffix missing "${snippet}"`, errors);
+        });
+
+        (expected.preservedSuffixExcludes || []).forEach((snippet) => {
+          assert((actual.preservedSuffix || "").indexOf(snippet) < 0, `${name}: preserved suffix unexpectedly contains "${snippet}"`, errors);
+        });
+
+        return {
+          name,
+          actual,
+          errors
+        };
+      }
+
+      function runNoSeedDetectionCase(name, body, expected) {
+        const actual = window.MailyOffice.__test.isSignatureThreadOnlyText(
+          body,
+          "Maily Tester",
+          "maily.tester@example.com"
+        );
+        const errors = [];
+        assert(actual === expected, `${name}: expected ${expected} but got ${actual}`, errors);
+        return {
+          name,
+          actual,
+          errors
+        };
+      }
+
+      async function runTypographyCase(name, original, family, size) {
+        const errors = [], saved = window.Office;
+        const suffix = '<div id="Signature">Signature unchanged</div>';
+        let body = original + suffix;
+        const ok = value => ({status:'succeeded',value});
+        try {
+          window.Office = {AsyncResultStatus:{Succeeded:'succeeded'},CoercionType:{Html:'html',Text:'text'},
+            context:{platform:'OfficeOnline',mailbox:{userProfile:{emailAddress:'synthetic@example.invalid'},item:{subject:'Synthetic font test',
+              body:{getTypeAsync:cb=>cb(ok('html')),getAsync:(_type,cb)=>cb(ok(body)),
+                prependAsync:()=>{throw new Error('Must rewrite');},setAsync:(value,_opts,cb)=>{body=value;cb(ok());}}}}}};
+          await window.MailyOffice.insertGeneratedDraft({text:'New wording',html:'<!-- MAILY_REPLY_START --><div style="font-family:Aptos;font-size:11pt"><span style="font-family:Times New Roman;font-size:10pt">New wording</span></div><!-- MAILY_REPLY_END -->'},
+            {expectedBody:body,expectedBodyType:'html',rewriteComposeBody:true,originalUserDraftSegment:original,preservedSuffix:suffix});
+          const parsed = new DOMParser().parseFromString(body,'text/html');
+          const span = Array.from(parsed.querySelectorAll('span')).find(e=>e.textContent==='New wording');
+          assert(span && span.style.fontFamily.replaceAll('"','')===family,name+': wrong generated font '+(span&&span.style.fontFamily),errors);
+          assert(span && span.style.fontSize===size,name+': wrong generated size',errors);
+          assert(body.endsWith(suffix),name+': signature changed',errors);
+          assert(body.startsWith('<!-- MAILY_REPLY_START -->') && body.split('<!-- MAILY_REPLY_START -->').length===2,name+': generated marker must cover formatting wrapper exactly once',errors);
+          assert(!body.includes('url('),name+': unsafe CSS entered output',errors);
+        } catch(error) {errors.push(name+': '+String(error.stack||error));}
+        finally {window.Office=saved;}
+        return {name,errors};
+      }
+      async function runLiveHtmlRewriteCase() {
+        const name = "html-current-reply-rewrite-preserves-signature-and-thread";
+        const errors = [];
+        const originalOffice = window.Office;
+        const originalFetch = window.fetch;
+        let writes = 0;
+        const suffix = '<div id="Signature"><p>Regards,</p><p>Maily Tester</p></div><div id="divRplyFwdMsg"><p>From: Other &lt;other@example.invalid&gt;</p><p>Quoted request</p></div>';
+        let body = '<p>Keep the revised date.</p><!-- MAILY_REPLY_START --><p>Edited reply for Tuesday.</p><!-- MAILY_REPLY_END --><p>Bring the signed copy.</p>' + suffix;
+        const ok = value => ({ status: 'succeeded', value });
+        try {
+          window.fetch = async () => { throw new Error('Network forbidden in synthetic rewrite test'); };
+          window.Office = {
+            AsyncResultStatus: { Succeeded:'succeeded' }, CoercionType:{Html:'html',Text:'text'},
+            context:{platform:'PC',diagnostics:{hostName:'Outlook'},mailbox:{
+              userProfile:{displayName:'Maily Tester',emailAddress:'maily.tester@example.com'},
+              item:{subject:{getAsync:cb=>cb(ok('Synthetic HTML reply'))},to:{getAsync:cb=>cb(ok([]))},cc:{getAsync:cb=>cb(ok([]))},
+                getComposeTypeAsync:cb=>cb(ok('reply')),
+                body:{getTypeAsync:cb=>cb(ok('html')),getAsync:(type,cb)=>cb(ok(type==='html'?body:window.MailyOffice.__test.htmlToText(body))),
+                  setAsync:(value,_options,cb)=>{body=value;writes++;cb(ok());},prependAsync:()=>{throw new Error('Rewrite must not prepend');}}}
+            }}
+          };
+          const defaults = {userName:'Maily Tester',currentDraft:'Obsolete cached reply'};
+          const snapshot = await window.MailyOffice.getComposeSnapshot(defaults,'regenerate');
+          const seed = snapshot.request.operation.currentDraft || '';
+          for(const fragment of ['Keep the revised date.','Edited reply for Tuesday.','Bring the signed copy.']) assert(seed.includes(fragment),name+': missing live text '+fragment,errors);
+          assert(!seed.includes('Obsolete')&&!seed.includes('Quoted request')&&!seed.includes('Regards,'),name+': cached or protected text entered rewrite seed',errors);
+          const options = { expectedContext:snapshot.composeContext,expectedBody:snapshot.composeState.body,expectedBodyType:'html',rewriteComposeBody:true,
+            originalUserDraftSegment:snapshot.composeState.userDraftSegment,preservedSuffix:snapshot.composeState.preservedSuffix,composeDefaults:defaults };
+          await window.MailyOffice.insertGeneratedDraft({text:'Polished reply שלום',html:'<p>Polished reply שלום</p>'},options);
+          assert(body.endsWith(suffix),name+': exact signature/thread suffix changed',errors);
+          assert(!body.includes('Edited reply')&&!body.includes('Keep the revised date'),name+': old reply remains',errors);
+          body=body.replace('Polished reply שלום','Fresh user edits שלום');
+          const next = await window.MailyOffice.getComposeSnapshot(defaults,'regenerate');
+          assert(next.request.operation.currentDraft.includes('Fresh user edits שלום'),name+': next snapshot ignored edits inside generated HTML',errors);
+          const before=body;
+          body += '<p>Changed while generating</p>';
+          let rejected=false;
+          try { await window.MailyOffice.insertGeneratedDraft({text:'Must not overwrite',html:'<p>Must not overwrite</p>'},{...options,expectedContext:next.composeContext,expectedBody:before}); }
+          catch(error) { rejected=/changed/.test(error.message); }
+          assert(rejected&&writes===1,name+': changed HTML was overwritten',errors);
+        } catch(error) { errors.push(name+': '+String(error.stack||error)); }
+        finally { window.Office=originalOffice; window.fetch=originalFetch; }
+        return {name,errors,writes};
+      }
+      async function runBridgeFallbackCase() {
+        const errors = [];
+        const originalOffice = window.Office;
+        const originalFetch = window.fetch;
+        let bridgeCalls = 0;
+        let logCalls = 0;
+        let setBodyValue = "";
+        const currentBody = "<div>Draft seed</div><div>Regards,</div><div>Maily Tester</div>";
+
+        function succeeded(value) {
+          return {
+            status: window.Office.AsyncResultStatus.Succeeded,
+            value
+          };
+        }
+
+        try {
+          window.Office = {
+            AsyncResultStatus: {
+              Succeeded: "succeeded"
+            },
+            CoercionType: {
+              Html: "html",
+              Text: "text"
+            },
+            context: {
+              diagnostics: {
+                hostName: "Outlook",
+                hostVersion: "16.0"
+              },
+              platform: "PC",
+              mailbox: {
+                userProfile: {
+                  displayName: "Maily Tester",
+                  emailAddress: "maily.tester@example.com"
+                },
+                item: {
+                  body: {
+                    getTypeAsync(callback) {
+                      callback(succeeded(window.Office.CoercionType.Html));
+                    },
+                    getAsync(arg, callback) {
+                      const cb = typeof arg === "function" ? arg : callback;
+                      cb(succeeded(currentBody));
+                    },
+                    setAsync(content, _options, callback) {
+                      setBodyValue = content;
+                      callback(succeeded(null));
+                    },
+                    prependAsync(_content, _options, callback) {
+                      callback(succeeded(null));
+                    }
+                  },
+                  subject: {
+                    getAsync(callback) {
+                      callback(succeeded("Bridge fallback test"));
+                    }
+                  },
+                  to: {
+                    getAsync(callback) {
+                      callback(succeeded([]));
+                    }
+                  },
+                  cc: {
+                    getAsync(callback) {
+                      callback(succeeded([]));
+                    }
+                  },
+                  getComposeTypeAsync(callback) {
+                    callback(succeeded("reply"));
+                  }
+                }
+              }
+            }
+          };
+
+          window.fetch = async (path) => {
+            const url = String(path || "");
+            if (url.indexOf("/api/outlook/rewrite-active-compose") >= 0) {
+              bridgeCalls += 1;
+              return {
+                ok: false,
+                status: 404,
+                text: async () => JSON.stringify({ error: "Bridge unavailable" })
+              };
+            }
+
+            if (url.indexOf("/api/outlook/client-log") >= 0) {
+              logCalls += 1;
+              return {
+                ok: true,
+                status: 200,
+                text: async () => ""
+              };
+            }
+
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({}),
+              text: async () => "{}"
+            };
+          };
+
+          let rejected = false;
+          try { await window.MailyOffice.insertGeneratedDraft(
+            {
+              text: "Polished reply",
+              html: "<div>Polished reply</div>"
+            },
+            {
+              rewriteComposeBody: true,
+              composeDefaults: {
+                userName: "Maily Tester"
+              },
+              seedText: "Draft seed",
+              originalUserDraftSegment: "<div>Draft seed</div>",
+              preservedSuffix: "<div>Regards,</div><div>Maily Tester</div>"
+            }); } catch (error) {
+            rejected = /safely rewrite|changed|generate again/i.test(error.message || "");
+          }
+
+          assert(rejected, "bridge-rejection: expected actionable safety rejection.", errors);
+          assert(bridgeCalls === 1, `bridge-fallback: expected one bridge attempt but got ${bridgeCalls}`, errors);
+          assert(setBodyValue === "", "bridge-rejection: must not write after native failure.", errors);
+          assert(currentBody === "<div>Draft seed</div><div>Regards,</div><div>Maily Tester</div>", "bridge-rejection: source draft changed.", errors);
+
+          return {
+            name: "bridge-rejection-preserves-draft",
+            actual: {
+              rejected,
+              bridgeCalls,
+              logCalls,
+              setBodyValue
+            },
+            errors
+          };
+        } catch (error) {
+          errors.push(`bridge-fallback: ${error && error.message ? error.message : error}`);
+          return {
+            name: "bridge-fallback-to-office-js",
+            actual: {
+              bridgeCalls,
+              logCalls,
+              setBodyValue
+            },
+            errors
+          };
+        } finally {
+          window.Office = originalOffice;
+          window.fetch = originalFetch;
+        }
+      }
+
+      window.addEventListener("load", async () => {
+        const results = [];
+
+        results.push(runCase(
+          "typed-draft-signature-thread",
+          [
+            "<div>Yes please do it.</div>",
+            "<div>Regards,</div>",
+            "<div>Maily Tester | Field CTO</div>",
+            "<div><a href='mailto:maily.tester@example.com'>maily.tester@example.com</a></div>",
+            "<div id='divRplyFwdMsg'><div>From: Zoom</div><div>Subject: Meeting</div></div>"
+          ].join(""),
+          {
+            userDraftText: "Yes please do it.",
+            canRewriteUserDraft: true,
+            preservedSuffixExact: true,
+            preservedSuffixIncludes: ["Regards,", "maily.tester@example.com", "divRplyFwdMsg"],
+            preservedSuffixExcludes: ["Yes please do it."]
+          }
+        ));
+
+        results.push(runCase(
+          "typed-draft-quote-only",
+          [
+            "<div>I won't be there at 15:00.</div>",
+            "<div id='divRplyFwdMsg'><div>From: Team</div><div>Subject: Status</div></div>"
+          ].join(""),
+          {
+            userDraftText: "I won't be there at 15:00.",
+            canRewriteUserDraft: true,
+            preservedSuffixExact: false,
+            preservedSuffixIncludes: ["divRplyFwdMsg"],
+            preservedSuffixExcludes: ["I won't be there at 15:00."]
+          }
+        ));
+
+        results.push(runCase(
+          "typed-draft-outlook-rich-signature",
+          [
+            "<div><span>Sure do it!</span></div>",
+            "<div>Regards,</div>",
+            "<div><span>Maily Tester | Field CTO - Data &amp; AI Innovation</span></div>",
+            "<div><span>M </span><a href='tel:+15550100'>+1-555-0100</a><span> | E </span><a href='mailto:maily.tester@example.com'>maily.tester@example.com</a></div>",
+            "<div id='divRplyFwdMsg'><div>From: Customer</div><div>Subject: Renewal</div></div>"
+          ].join(""),
+          {
+            userDraftText: "Sure do it!",
+            canRewriteUserDraft: true,
+            preservedSuffixExact: true,
+            preservedSuffixIncludes: ["Regards,", "maily.tester@example.com", "divRplyFwdMsg"],
+            preservedSuffixExcludes: ["Sure do it!"]
+          }
+        ));
+
+        results.push(runCase(
+          "typed-draft-single-wrapper-container",
+          [
+            "<div>",
+            "<div><span>Sure do it!</span></div>",
+            "<div>Regards,</div>",
+            "<div><span>Maily Tester | Field CTO - Data &amp; AI Innovation</span></div>",
+            "<div><span>M </span><a href='tel:+15550100'>+1-555-0100</a><span> | E </span><a href='mailto:maily.tester@example.com'>maily.tester@example.com</a></div>",
+            "<div id='divRplyFwdMsg'><div>From: Customer</div><div>Subject: Renewal</div></div>",
+            "</div>"
+          ].join(""),
+          {
+            userDraftText: "Sure do it!",
+            canRewriteUserDraft: true,
+            preservedSuffixExact: false,
+            preservedSuffixIncludes: ["Regards,", "maily.tester@example.com", "divRplyFwdMsg"],
+            preservedSuffixExcludes: ["Sure do it!"]
+          }
+        ));
+
+        results.push(runCase(
+          "typed-draft-signature-then-outlook-thread-headers",
+          [
+            "<div>",
+            "<div>Cool</div>",
+            "<div>Regards,</div>",
+            "<div>Maily Tester | Field CTO - Data &amp; AI Innovation</div>",
+            "<div>M +1-555-0100 | <a href='mailto:maily.tester@example.com'>maily.tester@example.com</a></div>",
+            "<hr>",
+            "<div><span>From: Maily Tester &lt;maily.tester@example.com&gt;</span></div>",
+            "<div><span>Date: Sunday, 15 February 2026 at 07:22</span></div>",
+            "<div><span>To: Example Recipient &lt;synthetic1@example.invalid&gt;</span></div>",
+            "<div><span>Subject: RE: Alert</span></div>",
+            "<div>Hi Example Recipient,</div>",
+            "</div>"
+          ].join(""),
+          {
+            userDraftText: "Cool",
+            canRewriteUserDraft: true,
+            preservedSuffixExact: false,
+            preservedSuffixIncludes: ["Regards,", "From: Maily Tester", "Subject: RE: Alert"],
+            preservedSuffixExcludes: ["<div>Cool</div>"]
+          }
+        ));
+
+        results.push(runCase(
+          "signature-and-thread-with-no-user-draft",
+          [
+            "<div>Regards,</div>",
+            "<div>Maily Tester | Field CTO - Data &amp; AI Innovation</div>",
+            "<div>M +1-555-0100 | <a href='mailto:maily.tester@example.com'>maily.tester@example.com</a></div>",
+            "<hr>",
+            "<div><span>From: Example Reviewer &lt;synthetic2@example.invalid&gt;</span></div>",
+            "<div><span>Subject: RE: OAS in Synthetic Project</span></div>",
+            "<div>Hi Test Sender,</div>"
+          ].join(""),
+          {
+            userDraftText: "",
+            canRewriteUserDraft: false,
+            preservedSuffixExact: false,
+            preservedSuffixIncludes: ["Regards,", "From: Example Reviewer", "RE: OAS in Synthetic Project"]
+          }
+        ));
+
+        results.push(runTextCase(
+          "text-seed-signature-thread-headers",
+          [
+            "Cool",
+            "",
+            "Regards,",
+            "Maily Tester | Field CTO - Data & AI Innovation",
+            "M +1-555-0100 | maily.tester@example.com",
+            "",
+            "From: Maily Tester <maily.tester@example.com>",
+            "Date: Sunday, 15 February 2026 at 07:22",
+            "To: Example Recipient <synthetic1@example.invalid>",
+            "Subject: RE: Alert",
+            "",
+            "Hi Example Recipient,"
+          ].join("\n"),
+          {
+            userDraftText: "Cool",
+            canRewriteUserDraft: true,
+            preservedSuffixIncludes: ["Regards,", "From: Maily Tester", "Subject: RE: Alert"],
+            preservedSuffixExcludes: ["Cool\n"]
+          }
+        ));
+
+        results.push(runTextCase(
+          "text-signature-thread-with-no-user-draft",
+          [
+            "Regards,",
+            "Maily Tester | Field CTO - Data & AI Innovation",
+            "M +1-555-0100 | maily.tester@example.com",
+            "",
+            "From: Example Reviewer <synthetic2@example.invalid>",
+            "Subject: RE: OAS in Synthetic Project",
+            "",
+            "Hi Test Sender,"
+          ].join("\n"),
+          {
+            userDraftText: "",
+            canRewriteUserDraft: false,
+            preservedSuffixIncludes: ["Regards,", "From: Example Reviewer", "RE: OAS in Synthetic Project"]
+          }
+        ));
+
+        results.push(runNoSeedDetectionCase(
+          "text-signature-thread-force-empty-draft",
+          [
+            "Regards,",
+            "Maily Tester | Field CTO - Data & AI Innovation",
+            "M +1-555-0100| E maily.tester@example.com",
+            "Example Org | 1 Example Road | 00000",
+            "",
+            "From: Example Reviewer <synthetic2@example.invalid>",
+            "Sent: Monday, March 30, 2026 9:02 AM",
+        'To: Example Sender <synthetic3@example.invalid>; Example Reviewer <synthetic4@example.invalid>',
+            "Subject: Re: OAS in Synthetic Project",
+            "",
+            "Synthetic Test Classification",
+            "",
+        'שלום נמען לדוגמה,',
+          ].join("\n"),
+          true
+        ));
+
+        results.push(await runBridgeFallbackCase());
+        results.push(await runLiveHtmlRewriteCase());
+        results.push(await runTypographyCase('editable-reply-font', '<p style="font-family:Arial;font-size:14pt">Existing reply</p>', 'Arial', '14pt'));
+        results.push(await runTypographyCase('nested-reply-font', '<div style="font-family:Verdana;font-size:12pt"><span>Existing reply</span></div>', 'Verdana', '12pt'));
+        results.push(await runTypographyCase('blank-compose-font', '<p style="font-family:Tahoma;font-size:13pt"><br></p>', 'Tahoma', '13pt'));
+        results.push(await runTypographyCase('safe-default-font', '<p style="font-family:url(https://example.invalid/font);font-size:expression(evil)">Existing reply</p>', 'Aptos, Calibri, sans-serif', '11pt'));
+        results.push(await runTypographyCase('outlook-normal-style', '<style>p.MsoNormal {font-family:"Segoe UI";font-size:12pt}</style><p class="MsoNormal">Existing reply</p>', 'Segoe UI', '12pt'));
+
+        const errors = results.flatMap((entry) => entry.errors);
+        document.getElementById("result").textContent = JSON.stringify({
+          results,
+          errors
+        }, null, 2);
+        document.title = errors.length === 0 ? "PASS" : "FAIL";
+      });
+    })();
+  </script>
+</body>
+</html>

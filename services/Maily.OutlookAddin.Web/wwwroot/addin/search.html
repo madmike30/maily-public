@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maily Search</title>
+  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script defer src="./js/maily-office.js?v=20261025public1"></script>
+  <script defer src="./js/search.js?v=20261025public1"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="header-band">
+        <div>
+          <h1 class="title">Search</h1>
+        </div>
+      </div>
+    </header>
+
+    <p id="searchStatus" class="status">Loading mailbox context...</p>
+
+    <section class="panel search-toolbar">
+      <label>
+        Search query
+        <input id="searchQuery" type="text" placeholder="e.g. meeting follow-up">
+      </label>
+      <div class="search-filters-grid">
+        <label>
+          Mail scope
+          <select id="searchScope"></select>
+        </label>
+        <label>
+          Time range
+          <select id="searchDateRange"></select>
+        </label>
+        <label>
+          Focus
+          <select id="searchFocus"></select>
+        </label>
+        <label>
+          Sender
+          <select id="searchSender" disabled>
+            <option value="">Any sender</option>
+          </select>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="searchBtn" class="primary" type="button">Start search</button>
+        <button id="refineSearchBtn" type="button" disabled>Apply filters</button>
+        <button id="clearSearchBtn" type="button">Clear</button>
+      </div>
+    </section>
+
+    <section class="panel search-refinements">
+      <div class="header-band">
+        <div>
+          <h2 class="section-title">Active filters</h2>
+        </div>
+        <span id="searchEvidenceChip" class="chip">Waiting</span>
+      </div>
+      <div id="activeSearchChips" class="chip-row">
+        <span class="chip-soft">No active search yet.</span>
+      </div>
+      <p id="searchTrustNote" class="trust-note">Maily will show whether the answer came from ranked previews or hydrated full-message evidence.</p>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <h3>Answer summary</h3>
+        <div id="answerSummary" class="result-copy">No search run yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Commitments</h3>
+        <div id="commitments" class="result-copy">No search run yet.</div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Matching emails</h2>
+      <p id="searchMeta" class="meta">No ranked results yet.</p>
+      <div id="searchResults" class="result-list">Run a search to see relevant emails.</div>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{
+  "version": "1.1.18",
+  "nodeVersion": "v22.23.4",
+  "keytarVersion": "7.9.0",
+  "runtime": "win-x64",
+  "files": [
+    {
+      "name": "node.exe",
+      "url": "https://nodejs.org/dist/v22.23.4/win-x64/node.exe",
+      "sha256": "dccc52de28d8df2ee22d2062424f8c563070d95d8ad70c54c4bf01d590dec14f"
+    },
+    {
+      "name": "atk.tgz",
+      "url": "https://registry.npmjs.org/@microsoft/m365agentstoolkit-cli/-/m365agentstoolkit-cli-1.1.18.tgz",
+      "sha256": "fc39ed00e807efa8156418a7c8e233188dc62d01a95db5ba3985aede0d5daf8b"
+    },
+    {
+      "name": "keytar.tgz",
+      "url": "https://registry.npmjs.org/keytar/-/keytar-7.9.0.tgz",
+      "sha256": "3b0faf5e59063f0cfc90d2ca3122568966cd9404fc5f761c7b2b2b2addea1973"
+    },
+    {
+      "name": "keytar-native.tgz",
+      "url": "https://github.com/atom/node-keytar/releases/download/v7.9.0/keytar-v7.9.0-napi-v3-win32-x64.tar.gz",
+      "sha256": "f00156103976f77847f9ff96ca96c3facac2b4527edf41dfee5d50be39736459"
+    },
+    {
+      "name": "node-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/nodejs/node/v22.23.4/LICENSE",
+      "sha256": "c738ae413cf561f174e34f6961f8ca458aae2369a73640dda6234c629b98bcc4"
+    },
+    {
+      "name": "chalk.tgz",
+      "url": "https://registry.npmjs.org/chalk/-/chalk-4.1.2.tgz",
+      "sha256": "e84c643aa53e87ace6c3d368b3cddda24a2d1434a06b6dfbdb628ad2107df90a",
+      "npmPath": "atk/node_modules/chalk"
+    },
+    {
+      "name": "ansi-styles.tgz",
+      "url": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-4.3.0.tgz",
+      "sha256": "2c539a46d85ab6033183997434d2d9a5ca2ceefc12b4db9022f564784cd7987f",
+      "npmPath": "atk/node_modules/ansi-styles"
+    },
+    {
+      "name": "supports-color.tgz",
+      "url": "https://registry.npmjs.org/supports-color/-/supports-color-7.2.0.tgz",
+      "sha256": "f16acafd1634624e60c24a5538004c4e168c82607f10dbe28395e9df3e7d5e4a",
+      "npmPath": "atk/node_modules/supports-color"
+    },
+    {
+      "name": "color-convert.tgz",
+      "url": "https://registry.npmjs.org/color-convert/-/color-convert-2.0.1.tgz",
+      "sha256": "920fa43538c019a085dbbf04cb6f72cc337624e5f5217519f0e7b2ef784e7ce1",
+      "npmPath": "atk/node_modules/color-convert"
+    },
+    {
+      "name": "color-name.tgz",
+      "url": "https://registry.npmjs.org/color-name/-/color-name-1.1.4.tgz",
+      "sha256": "507b7c4461e8eb941355af9a59e9a7e02cd0e7c6176b48d1809766344f3f1708",
+      "npmPath": "atk/node_modules/color-name"
+    },
+    {
+      "name": "has-flag.tgz",
+      "url": "https://registry.npmjs.org/has-flag/-/has-flag-4.0.0.tgz",
+      "sha256": "77a7eb1411d927bb8a5ca7069dbe168886d63c88f446f0b81500a2cf23ddb5b1",
+      "npmPath": "atk/node_modules/has-flag"
+    }
+  ]
+}

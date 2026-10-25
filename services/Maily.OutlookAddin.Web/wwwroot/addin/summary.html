@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maily Summary</title>
+  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script defer src="./js/maily-office.js?v=20261025public1"></script>
+  <script defer src="./js/summary-reply.js?v=20261025public1"></script>
+  <script defer src="./js/summary.js?v=20261025public1"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="header-band">
+        <div>
+          <h1 class="title">Summary</h1>
+        </div>
+        <span id="summarySurfaceChip" class="chip">Compose</span>
+      </div>
+      <nav class="pane-nav" aria-label="Maily tools">
+        <a href="./search.html?v=20261025public1">Search</a>
+        <a href="./daily-briefing.html?v=20261025public1">Briefing</a>
+        <a href="./settings.html?v=20261025public1">Settings</a>
+      </nav>
+      <div class="language-picker" aria-label="Summary generation language">
+        <span id="summaryLanguageLabel" class="language-picker-label">Summary language</span>
+        <div class="language-pill-group" role="group" aria-labelledby="summaryLanguageLabel">
+          <button id="summaryLanguageEnglishBtn" class="language-pill is-selected" type="button" data-language="English" aria-pressed="true">English</button>
+          <button id="summaryLanguageHebrewBtn" class="language-pill" type="button" data-language="Hebrew" aria-pressed="false">Hebrew</button>
+        </div>
+      </div>
+    </header>
+
+    <p id="summaryStatus" class="status">Loading Outlook context...</p>
+
+    <section class="summary-stack">
+      <article class="summary-card summary-card-strong">
+        <h3>Executive summary</h3>
+        <div id="executiveSummary" class="result-copy">No summary generated yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Main points</h3>
+        <div id="mainPoints" class="result-copy">No summary generated yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Action items</h3>
+        <div id="actionItems" class="result-copy">No summary generated yet.</div>
+      </article>
+    </section>
+
+    <section class="summary-card" aria-labelledby="replyFromSummaryTitle">
+      <h3 id="replyFromSummaryTitle">Reply from this summary</h3>
+      <p>Choose any action items worth addressing. Your existing reply takes priority; suggestions do not confirm commitments.</p>
+      <div id="replyActionChoices"></div>
+      <button id="prepareSummaryReplyBtn" type="button" disabled>Prepare reply</button>
+      <div id="summaryReplyPanel" hidden>
+        <h3>Reply preview</h3>
+        <div id="summaryReplyText" class="result-copy"></div>
+        <p id="summaryReplyHelp">Review the reply before applying it. Nothing is sent.</p>
+        <button id="applySummaryReplyBtn" class="primary" type="button" disabled>Use in Outlook draft</button>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="summarizeBtn" class="primary" type="button">Refresh summary</button>
+      <button id="copySummaryBtn" type="button">Copy summary</button>
+    </section>
+  </main>
+</body>
+</html>

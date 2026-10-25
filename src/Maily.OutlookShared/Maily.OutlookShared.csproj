@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\maui\Maily.Maui\Models\CodexLlmConfig.cs" Link="Models\CodexLlmConfig.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Models\OutlookAttachmentInfo.cs" Link="Models\OutlookAttachmentInfo.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Models\OutlookEmail.cs" Link="Models\OutlookEmail.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Models\UserSettings.cs" Link="Models\UserSettings.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\AppPaths.cs" Link="Services\AppPaths.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\CodexConfigService.cs" Link="Services\CodexConfigService.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\DraftService.cs" Link="Services\DraftService.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\MailyLogger.cs" Link="Services\MailyLogger.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\OracleResponsesClient.cs" Link="Services\OracleResponsesClient.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\OutlookBridgeService.cs" Link="Services\OutlookBridgeService.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\PromptTemplateService.cs" Link="Services\PromptTemplateService.cs" />
+    <Compile Include="..\..\maui\Maily.Maui\Services\UserSettingsService.cs" Link="Services\UserSettingsService.cs" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,16 @@
+using Maily.OutlookAddin.Web.Services;
+using Maily.OutlookAddin.Web.Models;
+using Maily.Generation.Contracts;
+if (!SearchCoverage.IsLimited(31, 31) || SearchCoverage.IsLimited(30, 31)) throw new Exception("Dense window must indicate potentially missing messages.");
+var cache = new OutlookSearchFetchCache();
+cache.Set("test@example.invalid", "inbox", "90d", [], true);
+var hit = cache.TryGet("test@example.invalid", "inbox", "90d")!;
+if (!hit.IsPartial) throw new Exception("Cache lost coverage.");
+var sessions = new OutlookSearchSessionStore();
+var session = sessions.CreateOrReplace("test@example.invalid", "default", "test", new(), hit.Candidates, hit.IsPartial);
+sessions.UpdateCurrentFilters(session.SessionId, new() { Sender = "sender@example.invalid" });
+if (!sessions.Get(session.SessionId)!.IsPartial) throw new Exception("Refinement lost partial coverage.");
+sessions.UpdateBaseCandidates(session.SessionId, new(), [], false);
+if (session.IsPartial) throw new Exception("Complete refreshed corpus retained stale partial coverage.");
+if (!SearchCoverage.MergeWarning(null, true).Contains("limited subset")) throw new Exception("Missing warning.");
+Console.WriteLine("PASS: dense-window, cache, refinement, refresh, and warning coverage contracts.");

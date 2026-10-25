@@ -1,0 +1,35 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const sourcePath='services/Maily.OutlookAddin.Web/wwwroot/addin/js/quick-tour.js';
+assert.ok(fs.existsSync(sourcePath),'Settings must provide the guided first-use tour');
+const nodes=new Map();
+for(const id of ['quickTour','tourStart','tourPanel','tourTitle','tourText','tourProgress','tourBack','tourNext','tourDismiss','card-tone','card-language','card-model','personalStyleSection']) {
+  nodes.set(id,{hidden:false,open:false,disabled:false,textContent:'',listeners:{},classList:{add(){},remove(){}},addEventListener(n,f){this.listeners[n]=f;},focus(){},scrollIntoView(){}});
+}
+let styleReads=0;
+const stored=new Map();
+const context={document:{getElementById:id=>nodes.get(id)},window:{localStorage:{getItem:k=>stored.get(k),setItem:(k,v)=>stored.set(k,v)},MailyOffice:{callJson(){styleReads++;throw Error('Tour must never read mail');}}}};
+vm.runInNewContext(fs.readFileSync(sourcePath,'utf8'),context);
+assert.equal(nodes.get('tourPanel').hidden,true);
+nodes.get('tourStart').listeners.click();
+assert.equal(nodes.get('tourPanel').hidden,false);
+assert.match(nodes.get('tourProgress').textContent,/1 of/);
+for(let i=0;i<5;i++)nodes.get('tourNext').listeners.click();
+assert.equal(nodes.get('personalStyleSection').open,true);
+assert.match(nodes.get('tourText').textContent,/sent emails/i);
+assert.match(nodes.get('tourText').textContent,/only when you choose/i);
+assert.equal(styleReads,0,'Tour must not trigger analysis or mailbox reads');
+nodes.get('tourNext').listeners.click();
+assert.equal(nodes.get('tourPanel').hidden,true);
+assert.deepEqual([...stored.keys()],['maily.quickTour.v1.completed'],'Only non-sensitive tour state may persist');
+nodes.get('tourStart').listeners.click();
+assert.match(nodes.get('tourProgress').textContent,/1 of/,'Tour is replayable');
+nodes.get('tourDismiss').listeners.click();
+assert.equal(nodes.get('tourPanel').hidden,true);
+console.log('PASS guided onboarding is replayable, opt-in and never reads mail');
+context.window.localStorage={getItem(){throw Error('blocked')},setItem(){throw Error('blocked')}};
+vm.runInNewContext(fs.readFileSync(sourcePath,'utf8'),context);
+nodes.get('tourStart').listeners.click();
+for(let i=0;i<6;i++)nodes.get('tourNext').listeners.click();
+console.log('PASS tour works when browser preference storage is unavailable');

@@ -1,0 +1,38 @@
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const assert=require('node:assert/strict');
+const {connect,isolatedEnvironment,executeProcess,verifyRuntime}=require('../../scripts/connect-outlook.cjs');
+const {check}=require('../../scripts/outlook-credential-preflight.cjs');
+(async()=>{
+ const id='683ea353-6d71-4315-afd4-147e968605a9';
+ const opts={manifest:'/synthetic/manifest.xml',manifestId:id};
+ const fixture=()=>{const calls=[];return {calls,verify:async()=>{},createSession:async()=>'/synthetic/unique',execute:async(args,home)=>{calls.push({args,home});return {code:0,stdout:args.includes('install')?`TitleId: U_${id}\nAppId: ${id}`:''};}};};
+ let deps=fixture();let result=await connect(opts,deps);
+ assert.equal(result.status,'registered');assert.equal(deps.calls.length,3);
+ assert.ok(deps.calls[0].args.includes('credential-preflight'));
+ assert.deepEqual(deps.calls[1].args,['auth','login','m365','--telemetry','false']);
+ assert.deepEqual(deps.calls[2].args,['install','--xml-path',opts.manifest,'--interactive','false','--telemetry','false']);
+ assert.equal(deps.calls[0].home,deps.calls[2].home);assert.ok(!JSON.stringify(deps.calls).includes('logout'));
+ console.log('PASS isolated sign-in precedes manifest install without logout/uninstall');
+ deps=fixture();deps.verify=async()=>{throw new Error('PRIVATE fixture');};result=await connect(opts,deps);assert.equal(deps.calls.length,0);assert.equal(result.code,'connection-unavailable');
+ console.log('PASS invalid runtime prevents sign-in');
+ for(const stage of [0,1,2]){deps=fixture();const execute=deps.execute;deps.execute=async(...args)=>{const r=await execute(...args);return deps.calls.length===stage+1?{code:1,stdout:'PRIVATE token fixture',timedOut:true}:r;};result=await connect(opts,deps);assert.equal(deps.calls.length,stage+1);assert.equal(result.status,'failed');assert.ok(!JSON.stringify(result).includes('PRIVATE'));}
+ console.log('PASS preflight, auth and registration failures stop sequence and redact output');
+ deps=fixture();deps.execute=async()=>({code:0,stdout:'TitleId: U_wrong\nAppId: 11111111-1111-1111-1111-111111111111'});result=await connect(opts,deps);assert.equal(result.code,'unverified-result');
+ console.log('PASS mismatched Microsoft application result fails closed');
+ let writes=0;assert.equal(await check({getPassword:async()=> 'a'.repeat(32),setPassword:async()=>writes++}),true);assert.equal(writes,0);
+ assert.equal(await check({getPassword:async()=> 'malformed',setPassword:async()=>writes++}),false);assert.equal(writes,0);
+ let stored=null;assert.equal(await check({getPassword:async()=>stored,setPassword:async(s,a,k)=>{assert.equal(s,'Microsoft 365 Agents Toolkit');assert.equal(a,'m365');stored=k;}}),true);assert.equal(stored.length,32);
+ assert.equal(await check({getPassword:async()=>null,setPassword:async()=>{}}),false);
+ console.log('PASS credential preflight preserves valid/bad existing keys and requires roundtrip storage');
+ const oldOptions=process.env.NODE_OPTIONS;process.env.NODE_OPTIONS='--require malicious-fixture';process.env.NODE_PATH='outside';const env=isolatedEnvironment('/synthetic/home');assert.equal(env.USERPROFILE,'/synthetic/home');assert.equal(env.HOME,'/synthetic/home');assert.equal(env.NODE_OPTIONS,undefined);assert.equal(env.NODE_PATH,undefined);if(oldOptions===undefined)delete process.env.NODE_OPTIONS;else process.env.NODE_OPTIONS=oldOptions;delete process.env.NODE_PATH;
+ console.log('PASS child-only environment isolates home and strips injection overrides');
+ const dir=path.resolve('output/connect-tests-'+crypto.randomUUID());fs.mkdirSync(dir,{recursive:true});
+ let child=await executeProcess(process.execPath,['-e','process.stdout.write(process.env.USERPROFILE)'],dir,5000);assert.equal(child.code,0);assert.equal(child.stdout,dir);
+ const started=Date.now();child=await executeProcess(process.execPath,['-e','setTimeout(()=>{},30000)'],dir,200);assert.ok(Date.now()-started<8000,'Timeout must return within bounded shutdown grace');assert.equal(child.timedOut,true);assert.notEqual(child.code,0);
+ child=await executeProcess(process.execPath,['-e','process.stdout.write("x".repeat(140000))'],dir,5000);assert.notEqual(child.code,0);assert.equal(child.stdout,'');
+ console.log('PASS real synthetic child environment, timeout and output cap');
+ assert.throws(()=>verifyRuntime(dir));
+ const required=['node.exe','atk/cli.js','atk/node_modules/keytar/lib/keytar.js','atk/node_modules/keytar/build/Release/keytar.node',...Array.from({length:6},(_,i)=>'fixture'+i)]; const files=required.map(name=>{const full=path.join(dir,name);fs.mkdirSync(path.dirname(full),{recursive:true});fs.writeFileSync(full,'synthetic');return {path:name,sha256:crypto.createHash('sha256').update('synthetic').digest('hex')};});fs.writeFileSync(path.join(dir,'runtime-inventory.json'),JSON.stringify({version:'1.1.18',nodeVersion:'v22.23.4',files}));verifyRuntime(dir);fs.writeFileSync(path.join(dir,'unlisted.js'),'synthetic');assert.throws(()=>verifyRuntime(dir),'Unlisted modules must be rejected');
+ console.log('PASS incomplete runtime and unlisted modules rejected');
+ const {extract}=require('../../scripts/bundle-outlook-connect.cjs'); const zlib=require('node:zlib');const archive=Buffer.alloc(1024);archive.write('../outside',0);archive.write('00000000000',124);archive.write('0',156);assert.throws(()=>extract(zlib.gzipSync(archive),dir,false));console.log('PASS archive traversal rejected; no live credential/account access');
+})().catch(e=>{console.error(e);process.exitCode=1;});

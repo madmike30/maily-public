@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const elements=new Map();
+const el=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',innerHTML:'',options:[],listeners:{},classList:{add(){}},addEventListener(e,f){this.listeners[e]=f;}});return elements.get(id);};
+let partial=true;
+const office={officeReady:async()=>{},logClientEvent:async()=>{},ensureBackendAvailable:async()=>{},getMailboxAddress:()=> 'test@example.invalid',applyDirectionToElement(){},getDirectionAttributes:()=>'',callJson:async url=>url.includes('settings')?{}:{query:'synthetic',results:[],filters:{},meta:{sessionId:'test',usedFallback:false,isPartial:partial,warning:partial?'Results cover a limited subset of this mailbox.':'',evidenceMode:'hydrated-top-results'}}};
+vm.runInNewContext(fs.readFileSync('services/Maily.OutlookAddin.Web/wwwroot/addin/js/search.js','utf8'),{document:{getElementById:el},window:{MailyOffice:office},console});
+await new Promise(setImmediate);
+el('searchQuery').value='synthetic';
+await el('searchBtn').listeners.click();
+assert.match(el('searchTrustNote').textContent,/limited subset/,'Coverage warning must show when usedFallback is false');
+await el('refineSearchBtn').listeners.click();
+assert.match(el('searchTrustNote').textContent,/limited subset/,'Refinement must still show partial coverage');
+partial=false;
+await el('refineSearchBtn').listeners.click();
+assert.doesNotMatch(el('searchTrustNote').textContent,/limited subset/,'Fresh complete result must remove warning');
+console.log('PASS: mocked search UI shows coverage independently of fallback and clears stale warning.');

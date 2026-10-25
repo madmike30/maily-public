@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maily Briefing</title>
+  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script defer src="./js/maily-office.js?v=20261025public1"></script>
+  <script defer src="./js/daily-briefing.js?v=20261025public1"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="header-band">
+        <div>
+          <h1 class="title">Briefing</h1>
+        </div>
+      </div>
+      <div class="language-picker" aria-label="Briefing generation language">
+        <span id="briefingLanguageLabel" class="language-picker-label">Briefing language</span>
+        <div class="language-pill-group" role="group" aria-labelledby="briefingLanguageLabel">
+          <button id="briefingLanguageEnglishBtn" class="language-pill is-selected" type="button" aria-pressed="true">English</button>
+          <button id="briefingLanguageHebrewBtn" class="language-pill" type="button" aria-pressed="false">Hebrew</button>
+        </div>
+      </div>
+    </header>
+
+    <p id="briefingStatus" class="status">Loading mailbox context...</p>
+    <p id="briefingMeta" class="meta">No briefing generated yet.</p>
+
+    <section class="summary-stack">
+      <article class="summary-card summary-card-strong">
+        <h3>Right now</h3>
+        <div id="briefingRightNow" class="result-copy">No briefing generated yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Meetings today</h3>
+        <div id="briefingMeetingsToday" class="result-copy">No briefing generated yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Open action items</h3>
+        <div id="briefingOpenActionItems" class="result-copy">No briefing generated yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Important unread</h3>
+        <div id="briefingImportantUnread" class="result-copy">No briefing generated yet.</div>
+      </article>
+      <article class="summary-card">
+        <h3>Next focus</h3>
+        <div id="briefingNextFocus" class="result-copy">No briefing generated yet.</div>
+      </article>
+    </section>
+
+    <section class="actions">
+      <button id="refreshBriefingBtn" class="primary" type="button">Refresh briefing</button>
+      <button id="copyBriefingBtn" type="button">Copy briefing</button>
+    </section>
+  </main>
+</body>
+</html>

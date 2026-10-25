@@ -1,0 +1,38 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync('services/Maily.OutlookAddin.Web/wwwroot/addin/js/settings.js','utf8');
+const html=fs.readFileSync('services/Maily.OutlookAddin.Web/wwwroot/addin/settings.html','utf8');
+const nodes=new Map();
+function element(id='',tag='DIV') { return {id,tagName:tag,value:'',checked:false,disabled:false,children:[],listeners:{},dataset:{},classList:{add(){},toggle(){}},textContent:'',innerHTML:'',addEventListener(name,fn){this.listeners[name]=fn;},setAttribute(){},appendChild(child){this.children.push(child);},replaceChildren(...children){this.children=children;},focus(){},scrollIntoView(){}}; }
+for(const match of html.matchAll(/<([a-z]+)[^>]*\bid="([^"]+)"[^>]*>/gi)) nodes.set(match[2],element(match[2],match[1].toUpperCase()));
+const get=id=>nodes.get(id);
+const base={profileId:'default',values:{userName:'Synthetic',tone:'professional',length:'concise',language:'English',model:'saved-model',customInstructions:'',systemPromptOverride:'',draftPromptOverride:'',stylePersonalizationEnabled:true},defaults:{model:''}};
+let catalog={status:'ready',models:[{id:'quick-model',displayName:'Quick model'},{id:'careful-model',displayName:'Careful model'}],recommendedModel:'quick-model',warning:''};
+let saveRelease, savePending;
+const calls=[];
+const office={officeReady:async()=>{},logClientEvent:async()=>{},ensureBackendAvailable:async()=>{},getMailboxDisplayName:()=> 'Synthetic',getMailboxAddress:()=> 'synthetic@example.invalid',applyDirectionToElement(){},callJson:async(path,options)=>{calls.push({path,options});if(path.startsWith('/api/outlook/models')){if(catalog instanceof Error)throw catalog;return catalog;}if(options?.method==='PUT'){savePending=JSON.parse(options.body);return await new Promise(resolve=>saveRelease=resolve);}if(path.includes('/style-profile/refresh'))return {};return structuredClone(base);}};
+vm.runInNewContext(source,{window:{MailyOffice:office},document:{getElementById:get,createElement:tag=>element('',tag.toUpperCase()),querySelectorAll:()=>[]},console,Date,Error,JSON,setTimeout,clearTimeout});
+async function settle(){for(let i=0;i<30;i++)await Promise.resolve();}
+await settle();
+assert.ok(calls.some(call=>call.path.startsWith('/api/outlook/models')),'Settings must discover models through the active backend connection');
+assert.equal(get('model').tagName,'SELECT','Model must be a choice, not a model-ID text field');
+assert.deepEqual(get('model').children.map(option=>option.value),['','saved-model','quick-model','careful-model']);
+assert.equal(get('model').value,'saved-model','Unavailable saved choice must not silently change');
+assert.match(get('model').children[1].textContent,/saved|unavailable|not listed/i);
+get('model').value='quick-model';get('model').listeners.change();
+catalog=new Error('synthetic catalog failure');
+await get('refreshModelsBtn').listeners.click();
+assert.equal(get('model').value,'quick-model','Failed refresh must preserve the user choice');
+assert.match(get('modelStatus').textContent,/could not|unavailable|try again/i);
+console.log('PASS dynamic model choices and safe catalog refresh');
+get('customInstructions').value='Preserve this unsaved preference';get('customInstructions').listeners.input();
+await get('reloadSettingsBtn').listeners.click();
+assert.equal(get('customInstructions').value,'Preserve this unsaved preference','Reload must preserve unsaved settings');
+const saving=get('saveSettingsBtn').listeners.click();await settle();
+assert.equal(get('customInstructions').disabled,true,'Editable fields must freeze while save is pending');
+assert.equal(get('model').disabled,true,'Model selection must freeze while save is pending');
+saveRelease({...base,values:savePending.values});await saving;
+assert.equal(get('customInstructions').value,'Preserve this unsaved preference');
+assert.equal(get('customInstructions').disabled,false);
+console.log('PASS unsaved settings preservation and pending-save protection');

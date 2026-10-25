@@ -1,0 +1,15 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync('services/Maily.OutlookAddin.Web/wwwroot/addin/js/maily-office.js','utf8');
+const start=source.indexOf('  async function logClientEvent(');
+const end=source.indexOf('\n  window.MailyOffice',start);
+let sent;
+const canary='SYNTHETIC_PRIVATE_DRAFT_canary@example.invalid';
+const ctx=vm.createContext({callVoid: async (_, opts)=>sent=opts.body,getMailboxAddress:()=>canary});
+vm.runInContext(source.slice(start,end)+'\nglobalThis.testLog=logClientEvent;',ctx);
+await ctx.testLog('generate-failed','error',canary,'taskpane');
+assert.ok(!sent.includes(canary),'private content reached telemetry transport');
+await ctx.testLog(canary,canary,canary,canary);
+assert.ok(!sent.includes(canary),'untrusted telemetry labels reached transport');
+console.log('PASS telemetry transport rejects content and arbitrary labels');

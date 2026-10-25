@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maily Settings</title>
+  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script defer src="./js/maily-office.js?v=20261025public1"></script>
+  <script defer src="./js/settings.js?v=20261025public1"></script>
+  <script defer src="./js/quick-tour.js?v=20261025public1"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div class="header-band">
+        <div>
+          <h1 class="title">Settings</h1>
+        </div>
+      </div>
+    </header>
+
+    <p id="settingsStatus" class="status">Loading settings...</p>
+
+    <input id="profileId" type="hidden" value="default">
+
+    <section id="quickTour" class="panel">
+      <h2 class="section-title">Get started</h2>
+      <p>Learn how to compose, choose settings, and optionally teach Maily your writing style.</p>
+      <button id="tourStart" type="button" class="ghost">Show quick tour</button>
+      <div id="tourPanel" hidden aria-live="polite">
+        <p id="tourProgress" class="field-help"></p>
+        <h3 id="tourTitle" tabindex="-1"></h3>
+        <p id="tourText"></p>
+        <button id="tourBack" type="button" class="ghost">Back</button>
+        <button id="tourNext" type="button">Next</button>
+        <button id="tourDismiss" type="button" class="ghost">Not now</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">Writing defaults</h2>
+      <div class="settings-grid">
+
+
+        <article id="card-tone" class="field-card">
+          <div class="field-heading">
+            <strong>Tone</strong>
+            <span id="default-tone" class="field-default"></span>
+          </div>
+          <label>
+            Preferred tone
+            <select id="tone">
+            </select>
+          </label>
+          <p id="help-tone" class="field-help"></p>
+          <p id="error-tone" class="field-error"></p>
+          <button type="button" class="ghost" data-reset-field="tone">Return to default</button>
+        </article>
+
+        <article id="card-length" class="field-card">
+          <div class="field-heading">
+            <strong>Reply length</strong>
+            <span id="default-length" class="field-default"></span>
+          </div>
+          <label>
+            Preferred length
+            <select id="length">
+            </select>
+          </label>
+          <p id="help-length" class="field-help"></p>
+          <p id="error-length" class="field-error"></p>
+          <button type="button" class="ghost" data-reset-field="length">Return to default</button>
+        </article>
+
+        <article id="card-language" class="field-card">
+          <div class="field-heading">
+            <strong>Language</strong>
+            <span id="default-language" class="field-default"></span>
+          </div>
+          <label>
+            Preferred fallback language
+            <select id="language">
+            </select>
+          </label>
+          <p id="help-language" class="field-help"></p>
+          <p id="error-language" class="field-error"></p>
+          <button type="button" class="ghost" data-reset-field="language">Return to default</button>
+        </article>
+
+        <article id="card-model" class="field-card">
+          <div class="field-heading">
+            <strong>Model</strong>
+            <span id="default-model" class="field-default"></span>
+          </div>
+          <label>
+            Reply model
+            <select id="model"><option value="">Automatic (fast)</option></select>
+          </label>
+          <p id="modelStatus" class="field-help" role="status" aria-live="polite">Checking models for your connection...</p>
+          <p id="help-model" class="field-help"></p>
+          <p id="error-model" class="field-error"></p>
+          <button type="button" class="ghost" data-reset-field="model">Return to default</button>
+          <button id="refreshModelsBtn" type="button" class="ghost">Refresh models</button>
+        </article>
+      </div>
+    </section>
+
+    <details id="personalStyleSection" class="details-card">
+      <summary><strong>Personal writing style (optional)</strong></summary>
+    <section class="panel">
+      <h2 class="section-title">Personal style</h2>
+      <p class="panel-subtitle">Learning your style reads sent emails. Start it only when you want Maily to analyze them.</p>
+      <div class="toggle-row">
+        <div class="toggle-copy">
+          <strong>Use learned style from Sent Items</strong>
+          <span>Recommended: enabled</span>
+        </div>
+        <input id="stylePersonalizationEnabled" class="checkbox" type="checkbox" checked>
+      </div>
+      <p id="help-stylePersonalizationEnabled" class="field-help"></p>
+      <p id="error-stylePersonalizationEnabled" class="field-error"></p>
+      <div class="field-actions">
+        <button type="button" class="ghost" data-reset-field="stylePersonalizationEnabled">Return to default</button>
+      </div>
+      <div class="actions actions-3">
+        <button id="refreshStyleBtn" class="secondary-accent" type="button">Learn my writing style</button>
+        <button id="reloadSettingsBtn" type="button">Reload</button>
+      </div>
+      <div id="styleStateChips" class="chip-row"></div>
+      <div class="summary-stack style-detail-stack">
+        <article class="summary-card summary-card-strong">
+          <h3>What Maily learned</h3>
+          <p id="styleProfileMeta">No learned style yet.</p>
+          <div id="styleProfileSummary" class="long-copy">Refresh style from Sent Items to build a reusable style profile.</div>
+        </article>
+        <article class="summary-card">
+          <h3>Reusable reply rules</h3>
+          <p id="styleRefreshMeta">No refresh history yet.</p>
+          <div id="analyzedStyle" class="long-copy">Maily will store a reusable guidance profile here after analysis.</div>
+        </article>
+        <article class="summary-card">
+          <h3>How to steer it</h3>
+          <p id="styleSteeringHint">Refresh after you have sent a few representative emails.</p>
+          <div id="styleSteeringPreview" class="long-copy guidance-preview">No extra reusable guidance saved yet. Add a short note if you want Maily to be warmer, more concise, or more structured than the learned baseline.</div>
+          <div class="field-actions">
+            <button id="openStyleGuidanceBtn" type="button" class="ghost">Adjust style guidance</button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    </details>
+
+    <details id="advancedSection" class="details-card">
+      <summary>
+        <strong>Advanced</strong>
+      </summary>
+      <div class="details-body section-stack">
+        <ul id="advancedWarnings" class="warning-list"></ul>
+        <section class="panel nested-panel">
+          <h2 class="section-title">Generation options</h2>
+          <div class="settings-grid">
+        <article id="card-userName" class="field-card">
+          <div class="field-heading">
+            <strong>Your name</strong>
+            <span id="default-userName" class="field-default"></span>
+          </div>
+          <label>
+            Used for prompt context
+            <input id="userName" type="text" placeholder="Used for prompt context only">
+          </label>
+          <p id="help-userName" class="field-help"></p>
+          <p id="error-userName" class="field-error"></p>
+          <button type="button" class="ghost" data-reset-field="userName">Return to default</button>
+        </article>
+            <article id="card-customInstructions" class="field-card">
+              <div class="field-heading">
+                <strong>Custom instructions</strong>
+                <span id="default-customInstructions" class="field-default"></span>
+              </div>
+              <label>
+                Reusable guidance
+                <textarea id="customInstructions" placeholder="Add reusable guidance for all generated replies."></textarea>
+              </label>
+              <p id="help-customInstructions" class="field-help"></p>
+              <p id="error-customInstructions" class="field-error"></p>
+              <button type="button" class="ghost" data-reset-field="customInstructions">Return to default</button>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel nested-panel">
+          <h2 class="section-title">Prompt controls</h2>
+          <p class="panel-subtitle">Review the current Maily baselines first, then copy them into an override editor only when you want to customize them.</p>
+          <div class="summary-grid">
+            <article class="summary-card">
+              <h3>Reply system baseline</h3>
+              <p id="baselineSystemPromptSource">Current shipped prompt</p>
+              <textarea id="baselineSystemPrompt" class="readonly-area" readonly></textarea>
+              <button type="button" class="ghost" data-copy-baseline="systemPromptOverride">Load baseline into editor</button>
+            </article>
+            <article class="summary-card">
+              <h3>Draft rewrite baseline</h3>
+              <p id="baselineDraftPromptSource">Current shipped prompt</p>
+              <textarea id="baselineDraftPrompt" class="readonly-area" readonly></textarea>
+              <button type="button" class="ghost" data-copy-baseline="draftPromptOverride">Load baseline into editor</button>
+            </article>
+          </div>
+          <div class="settings-grid">
+            <article id="card-systemPromptOverride" class="field-card">
+              <div class="field-heading">
+                <strong>System prompt override</strong>
+                <span id="default-systemPromptOverride" class="field-default"></span>
+              </div>
+              <label>
+                Full system prompt override
+                <textarea id="systemPromptOverride" placeholder="Optional. Replaces the default system prompt used for reply generation."></textarea>
+              </label>
+              <p id="help-systemPromptOverride" class="field-help"></p>
+              <p id="error-systemPromptOverride" class="field-error"></p>
+              <button type="button" class="ghost" data-reset-field="systemPromptOverride">Return to default</button>
+            </article>
+
+            <article id="card-draftPromptOverride" class="field-card">
+              <div class="field-heading">
+                <strong>Draft rewrite prompt override</strong>
+                <span id="default-draftPromptOverride" class="field-default"></span>
+              </div>
+              <label>
+                Rewrite template override
+                <textarea id="draftPromptOverride" placeholder="Optional. Replaces the draft rewrite template used when you already typed a reply."></textarea>
+              </label>
+              <p id="help-draftPromptOverride" class="field-help"></p>
+              <p id="error-draftPromptOverride" class="field-error"></p>
+              <button type="button" class="ghost" data-reset-field="draftPromptOverride">Return to default</button>
+            </article>
+          </div>
+        </section>
+      </div>
+    </details>
+
+    <section class="panel save-bar">
+      <p id="settingsSaveNote" class="save-note">No unsaved changes.</p>
+    </section>
+
+    <section class="actions">
+      <button id="saveSettingsBtn" class="primary" type="button">Save settings</button>
+      <button id="resetAllBtn" type="button">Reset all to defaults</button>
+    </section>
+  </main>
+</body>
+</html>

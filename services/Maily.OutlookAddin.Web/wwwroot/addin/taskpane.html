@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maily Generate Reply</title>
+  <link rel="stylesheet" href="./styles.css?v=20261025public1">
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <script defer src="./js/maily-office.js?v=20261025public1"></script>
+  <script defer src="./js/taskpane.js?v=20261025public1"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <h1 class="title">Your reply</h1>
+      <details class="details-card"><summary>Change reply language</summary>
+      <div class="language-picker" aria-label="Reply generation language">
+        <span id="replyLanguageLabel" class="language-picker-label">Reply language</span>
+        <div class="language-pill-group" role="group" aria-labelledby="replyLanguageLabel">
+          <button id="replyLanguageEnglishBtn" class="language-pill is-selected" type="button" data-language="English" aria-pressed="true">English</button>
+          <button id="replyLanguageHebrewBtn" class="language-pill" type="button" data-language="Hebrew" aria-pressed="false">Hebrew</button>
+        </div>
+      </div>
+      </details>
+    </header>
+
+    <p id="status" class="status">Waiting for Outlook compose context...</p>
+
+    <p class="panel-subtitle">Maily previews an improved reply, or writes one if it is empty. Apply it when ready. Your signature and quoted email stay in place. Refinements use the reply currently in Outlook.</p>
+    <details id="seedPanel" class="panel seed-panel seed-panel-empty">
+      <summary>Before: your current reply</summary>
+      <p id="seedMeta" class="meta" hidden>No typed reply text detected yet.</p>
+      <div id="seedText" class="seed-preview">Maily will use the text you type in the Outlook reply area as the starting point for generation.</div>
+    </details>
+
+    <section class="panel">
+      <h2>Suggested reply</h2>
+      <p id="draftMeta" class="meta" hidden>No draft generated yet.</p>
+      <div id="draftText" class="draft">Your suggested reply will appear here. Review it before applying it to Outlook.</div>
+    </section>
+
+    <section class="actions">
+      <button id="generateBtn" class="primary" type="button">Prepare reply</button>
+      <button id="applyBtn" class="primary" type="button" disabled>Apply reply</button>
+      <button id="undoBtn" type="button" disabled>Undo last change</button>
+      <button id="insertBtn" type="button" hidden>Prepare again</button>
+    </section>
+    <section class="actions" aria-label="Refine the reply currently in Outlook">
+      <button id="shorterBtn" type="button">Shorter</button>
+      <button id="clearerBtn" type="button">Clearer</button>
+      <button id="warmerBtn" type="button">Warmer</button>
+    </section>
+  </main>
+</body>
+</html>
