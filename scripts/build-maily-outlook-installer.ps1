@@ -183,7 +183,8 @@ Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\OutlookShutdown.ps1") -Dest
 Set-Content -LiteralPath $packageModePath -Value $PackageMode -Encoding ASCII
 $documentsRoot = Join-Path $packageRoot 'docs'
 New-Item -ItemType Directory -Force -Path $documentsRoot | Out-Null
-foreach ($document in @('DISCLAIMER.md', 'RELEASE_NOTES_1.3.1.md', 'INSTALLER.md')) {
+$releaseNotesVersion = ([version]$manifestVersion).ToString(3)
+foreach ($document in @('DISCLAIMER.md', "RELEASE_NOTES_$releaseNotesVersion.md", 'INSTALLER.md')) {
   Copy-Item -LiteralPath (Join-Path $repoRoot "docs/$document") -Destination (Join-Path $documentsRoot $document) -Force
 }
 foreach ($license in @('LICENSE', 'LICENSE.md')) {

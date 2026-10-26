@@ -21,3 +21,7 @@ const setupExecutable=packaging.match(/\$setupExeName\s*=\s*"([^"]+)"/)[1];
 const readinessClassifier=fs.readFileSync('src/Maily.Generation/Services/CodexReadiness.cs','utf8');
 assert.ok(readinessClassifier.includes(`Open ${setupExecutable} from the original extracted installer package and`),'readiness recovery must name the packaged installer');
 console.log('PASS readiness packaged installer guidance');
+
+assert.doesNotMatch(packaging,/RELEASE_NOTES_1\.3\.1\.md/,'package notes must follow the manifest release');
+assert.ok(packaging.includes('RELEASE_NOTES_\u0024releaseNotesVersion.md'));
+console.log('PASS versioned package notes');

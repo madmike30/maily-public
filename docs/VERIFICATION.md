@@ -1,6 +1,6 @@
 # Verification scope
 
-The release workflow runs the full local synthetic suite, fresh review, a pinned-runtime/package inventory check, and an authorized local install/uninstall/reinstall cycle. Release-specific counts, checksums and status are recorded with the published release after those gates complete.
+The release workflow runs the full local synthetic suite, fresh review and pinned-runtime/package inventory checks. Live lifecycle validation is version-specific: the install/uninstall/reinstall evidence below applies to 1.3.1 only. Version 1.3.2 leaves the active installation untouched.
 
 Covered behavior includes draft identity/body safety, signature/history preservation, automatic language, font handling, summary handoff, comparison/refinements, Undo, privacy-safe diagnostics, runtime tool restrictions, package contents and mocked installation failure/recovery paths.
 
@@ -19,3 +19,12 @@ No unsigned artifact can be described as perfectly safe. Use the checksums, read
 - Public source and all reachable clean history were checked for private data; the original development history was not imported. Build logs, local profiles, authentication files, screenshots and private-key files are excluded.
 
 The unsupported hosted-package uninstall path has a known cleanup defect that can prevent reinstalling over its leftover connector directories. This does not affect the local Windows package published here. Fresh-account registration and live compose visual checks remain open as described above.
+
+## Version 1.3.2.0 evidence
+
+- Packaged runtime: seven checks passed with isolated synthetic data, covering authentication/catalog, English/Hebrew generation, existing-draft commitments and automatic language. No Outlook access. An initial catalog check was unavailable during concurrent builds; the preserved follow-up after builds completed passed, with catalog response in 989ms. This does not guarantee latency under every workload.
+- Independent source/package review: GO, no remaining findings. All 952 inventory hashes and sizes verified; the final ZIP contains 953 files and 26 directory entries. Executable bytes match the package tested above; only release-note links were corrected afterward.
+- Initial full synthetic run: 55 passed, one test-helper file-sharing race failed. Atomic readiness publication and cleanup fixed that race; all five targeted lifecycle cases passed. No assertions were weakened.
+- ZIP SHA256: `f72cc8cdf7b8cf49023379f20fa068f2a5a363489f8fbb1ad38d49206dbb3920`.
+- No live install/uninstall, mailbox access or sends were performed for this version. The 1.3.1 lifecycle evidence remains historical, not a claim about a new live 1.3.2 installation.
+- Final complete local synthetic rerun: **56 passed, 0 failed**. All 205 public text files passed strict UTF-8/no-BOM checks. Hosted CI remains disabled; no paid Actions run was used.

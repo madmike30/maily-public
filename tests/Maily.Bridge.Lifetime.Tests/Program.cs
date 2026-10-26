@@ -17,20 +17,28 @@ ProcessStartInfo Worker(params string[] arguments)
     return start;
 }
 
+void PublishReady(string marker)
+{
+    // Publish only after the writer closes; existence is the parent's readiness signal.
+    var pending = marker + ".pending";
+    File.WriteAllText(pending, Environment.ProcessId.ToString());
+    File.Move(pending, marker);
+}
+
 if (args.Length > 0 && args[0] == "--worker")
 {
     if (args[1] == "success") { Console.Write("synthetic-output"); return 0; }
     if (args[1] == "fail") { Console.Error.Write("SYNTHETIC-PRIVATE-STDERR-CANARY"); return 7; }
     if (args[1] == "sleep")
     {
-        File.WriteAllText(args[2], Environment.ProcessId.ToString());
+        PublishReady(args[2]);
         await Task.Delay(Timeout.Infinite);
     }
     if (args[1] == "tree")
     {
         using var child = Process.Start(Worker("--worker", "sleep", args[2] + ".child"))!;
         while (!File.Exists(args[2] + ".child")) await Task.Delay(10);
-        File.WriteAllText(args[2], Environment.ProcessId.ToString());
+        PublishReady(args[2]);
         await Task.Delay(Timeout.Infinite);
     }
     return 0;
@@ -59,11 +67,13 @@ async Task VerifyCancellation(bool timeout)
     var marker = Path.Combine(output, timeout ? "timeout.pid" : "cancel.pid");
     var run = BridgeProcessRunner.RunAsync(Worker("--worker", "tree", marker), gate,
         TimeSpan.FromSeconds(timeout ? 4 : 30), cancel.Token);
-    await Ready(marker);
-    var parent = int.Parse(File.ReadAllText(marker));
-    var child = int.Parse(File.ReadAllText(marker + ".child"));
+    var parent = 0;
+    var child = 0;
     try
     {
+        await Ready(marker);
+        parent = int.Parse(File.ReadAllText(marker));
+        child = int.Parse(File.ReadAllText(marker + ".child"));
         Assert(gate.CurrentCount == 0, "Worker does not own gate while running");
         var follower = Task.Run(async () => {
             await gate.WaitAsync();
@@ -83,8 +93,9 @@ async Task VerifyCancellation(bool timeout)
     finally
     {
         cancel.Cancel(); // Test owns these synthetic workers. Preserve all files and diagnostics.
+        try { await run; } catch { /* The expected failure still completes owned-worker cleanup. */ }
         foreach (var id in new[] { parent, child })
-            if (Alive(id)) { using var p = Process.GetProcessById(id); p.Kill(true); await p.WaitForExitAsync(); }
+            if (id > 0 && Alive(id)) { using var p = Process.GetProcessById(id); p.Kill(true); await p.WaitForExitAsync(); }
     }
 }
 await Check("successful output and nonzero exit", async () =>
