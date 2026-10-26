@@ -37,6 +37,7 @@ Invoke-Check 'settings-tour' { & node tests/settings-safety/tour.mjs }
 Invoke-Check 'automatic-language' { & node tests/language/automatic.mjs }
 Invoke-Check 'summary-reply' { & node tests/summary-reply/handoff.mjs }
 Invoke-Check 'outlook-connect' { & node tests/outlook-connect/connect.cjs }
+Invoke-Check 'connector-package-size' { & node tests/outlook-connect/size.cjs }
 Invoke-Check 'pane-key' { & node tests/Maily.Bootstrap.Tests/pane-key.mjs }
 Invoke-Check 'segmentation' { & pwsh -NoProfile -File scripts/test-outlook-compose-segmentation.ps1 }
 Invoke-Check 'panes' { & pwsh -NoProfile -File scripts/test-outlook-addin-harness.ps1 }
@@ -67,6 +68,7 @@ Invoke-Check 'uninstall-completion' { & powershell -NoProfile -ExecutionPolicy B
 Invoke-Check 'installer-mailbox-activation' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-mailbox-activation.ps1 }
 Invoke-Check 'installer-asset-upgrade' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-asset-upgrade.ps1 }
 Invoke-Check 'package-retention' { & pwsh -NoProfile -File scripts/test-package-retention.ps1 }
+Invoke-Check 'package-runtime-sharing' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-package-runtime-dedup.ps1 }
 Invoke-Check 'package-entry-local' { & pwsh -NoProfile -File scripts/test-installer-package-entry.ps1 -PackageMode Local }
 Invoke-Check 'package-entry-hosted' { & pwsh -NoProfile -File scripts/test-installer-package-entry.ps1 -PackageMode Hosted }
 Invoke-Check 'installer-timeout' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-timeout.ps1 }

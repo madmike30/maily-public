@@ -6,7 +6,7 @@
   xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
   xsi:type="MailApp">
   <Id>683ea353-6d71-4315-afd4-147e968605a9</Id>
-  <Version>1.3.2.0</Version>
+  <Version>1.3.3.0</Version>
   <ProviderName>Maily</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Maily Reply Assistant" />

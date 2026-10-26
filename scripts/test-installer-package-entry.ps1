@@ -12,6 +12,7 @@ function Write-Fixture([string]$Relative, [string]$Content) {
   [IO.File]::WriteAllText((Join-Path $fixture $Relative), $Content, [Text.UTF8Encoding]::new($false))
 }
 Copy-Item -LiteralPath $BuilderPath -Destination (Join-Path $fixture 'scripts/build.ps1')
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'MailyPackageRuntime.ps1') -Destination (Join-Path $fixture 'scripts/MailyPackageRuntime.ps1')
 Write-Fixture 'addin/manifest.xml' '<OfficeApp><Id>683ea353-6d71-4315-afd4-147e968605a9</Id><Version>1.3.1.0</Version></OfficeApp>'
 foreach ($document in @('DISCLAIMER.md', 'RELEASE_NOTES_1.3.1.md', 'INSTALLER.md')) { Write-Fixture "docs/$document" "Synthetic document $document" }
 foreach ($license in @('LICENSE', 'LICENSE.md')) { Write-Fixture $license "Synthetic license $license" }

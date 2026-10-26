@@ -1,10 +1,10 @@
 # Maily
 
-Public preview 1.3.2 includes refined navigation, reply-author/signature safeguards and faster model discovery; see [CHANGELOG](CHANGELOG.md).
+Public preview 1.3.3 reduces the self-contained download size while retaining the refined UI, reply-author/signature safeguards and bundled AI runtime; see [CHANGELOG](CHANGELOG.md).
 
 An open-source AI drafting assistant for **classic Outlook on Windows**. Generate a reply, compare it with your current draft, refine it, and apply it only when you are ready. Maily never sends mail automatically.
 
-**Public preview 1.3.2.0.** This is an unsigned, experimental release, not a Microsoft or OpenAI product. Fresh-account Microsoft registration has not been verified across organizations. Organization policy may require administrator deployment. Read the [limitations](docs/RELEASE_NOTES_1.3.2.md) before installing.
+**Public preview 1.3.3.0.** This is an unsigned, experimental release, not a Microsoft or OpenAI product. Fresh-account Microsoft registration has not been verified across organizations. Organization policy may require administrator deployment. Read the [limitations](docs/RELEASE_NOTES_1.3.3.md) before installing.
 
 ## Install only Maily
 

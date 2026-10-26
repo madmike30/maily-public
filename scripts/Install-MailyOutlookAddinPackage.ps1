@@ -674,6 +674,10 @@ function Test-MailyPackageIntegrity {
     if ($file.FullName -eq $inventoryPath) { continue }
     if (-not $listed.Contains($file.FullName)) { throw "Package inventory omitted a file: $($file.Name)" }
   }
+  if (Test-Path -LiteralPath (Join-Path $payloadRoot 'app/runtime-file-map.json')) {
+    . (Join-Path $PSScriptRoot 'MailyPackageRuntime.ps1')
+    Test-MailyPackageRuntime -AppRoot (Join-Path $payloadRoot 'app') | Out-Null
+  }
   return @{ verifiedFiles = @($inventory).Count }
 }
 
@@ -1659,6 +1663,11 @@ try {
 
     foreach ($name in $payloadDirectories) {
       Copy-PayloadDirectory -Name $name
+    }
+
+    if (-not $isHostedPackage -and (Test-Path -LiteralPath (Join-Path $installRootPath 'app/runtime-file-map.json'))) {
+      . (Join-Path $PSScriptRoot 'MailyPackageRuntime.ps1')
+      Restore-MailyPackageRuntime -AppRoot (Join-Path $installRootPath 'app')
     }
 
     $uninstallSource = Join-Path $packageRoot "setup\uninstall.ps1"

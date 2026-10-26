@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.3.0 — public preview (2026-10-26)
+
+- Reduce download size by storing identical backend/supervisor runtime files once and restoring verified copies during setup.
+- Exclude connector development source maps while retaining executable code, resources and licenses.
+- Preserve self-contained installation, existing application paths and settings/rollback behavior.
+
 ## 1.3.2.0 — public preview (2026-10-26)
 
 - Refined compose, summary, settings, search and briefing hierarchy, including explicit Automatic-language recovery, clearer actions, keyboard focus and narrow-pane layouts.

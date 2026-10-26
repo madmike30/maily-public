@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),zlib=require('node:zlib');
 const hash=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
-function extract(bytes,destination,stripPackage) {
+function extract(bytes,destination,stripPackage,{omitSourceMaps=false}={}) {
   const tar=zlib.gunzipSync(bytes);
   for(let offset=0;offset+512<=tar.length;) {
     const name=tar.toString('utf8',offset,offset+100).replace(/\0.*$/s,'');
@@ -17,7 +17,7 @@ function extract(bytes,destination,stripPackage) {
     const target=path.resolve(destination,relative);
     if(!target.startsWith(path.resolve(destination)+path.sep)&&target!==path.resolve(destination))throw new Error('Archive escapes destination');
     if(type==='5')fs.mkdirSync(target,{recursive:true});
-    else if(type==='0'||type==='\0') {fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,tar.subarray(offset+512,offset+512+size),{flag:'wx'});}
+    else if(type==='0'||type==='\0') {if(!(omitSourceMaps&&relative.endsWith('.js.map'))){fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,tar.subarray(offset+512,offset+512+size),{flag:'wx'});}}
     else throw new Error('Archive links and unsupported entries are forbidden');
     offset+=512+Math.ceil(size/512)*512;
   }
@@ -36,7 +36,7 @@ async function bundle(destination,cache) {
       if(!/^atk\/node_modules\/[a-z0-9-]+$/.test(file.npmPath))throw new Error('Unsafe dependency destination');
       extract(bytes,path.join(destination,file.npmPath),true);
     }
-    else if(file.name==='atk.tgz')extract(bytes,path.join(destination,'atk'),true);
+    else if(file.name==='atk.tgz')extract(bytes,path.join(destination,'atk'),true,{omitSourceMaps:true});
     else if(file.name==='keytar.tgz')extract(bytes,path.join(destination,'atk/node_modules/keytar'),true);
     else if(file.name==='keytar-native.tgz')extract(bytes,path.join(destination,'atk/node_modules/keytar'),false);
     else fs.writeFileSync(path.join(destination,file.name),bytes,{flag:'wx'});

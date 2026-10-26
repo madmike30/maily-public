@@ -28,3 +28,13 @@ The unsupported hosted-package uninstall path has a known cleanup defect that ca
 - ZIP SHA256: `f72cc8cdf7b8cf49023379f20fa068f2a5a363489f8fbb1ad38d49206dbb3920`.
 - No live install/uninstall, mailbox access or sends were performed for this version. The 1.3.1 lifecycle evidence remains historical, not a claim about a new live 1.3.2 installation.
 - Final complete local synthetic rerun: **56 passed, 0 failed**. All 205 public text files passed strict UTF-8/no-BOM checks. Hosted CI remains disabled; no paid Actions run was used.
+
+## Version 1.3.3.0 evidence
+
+- ZIP: 275,580,679 bytes (262.8 MiB), down from 319,219,299 bytes: 43,638,620 bytes / 13.7% smaller. This is a download optimization; installed runtime copies are retained for compatibility.
+- Final local suite: 58 passed, 0 failed; merge gate PASS; independent code/privacy review GO.
+- Actual compact package reconstructed all 188 shared DLLs (80,167,952 bytes) with matching hashes. All 763 inventory hashes and 764 archived files verified. Synthetic map tests cover tampering, unsafe paths, collisions, legacy packages and rollback boundaries on both PowerShell versions.
+- Connector executable/resource/license bytes are unchanged; only three development source maps were omitted. Isolated connector startup and integrity checks passed.
+- Seven packaged-runtime checks passed with synthetic inputs and no Outlook access. Initial cold catalog discovery was unavailable during verification activity; the post-build follow-up was ready on its first attempt. Original failure evidence is retained; no universal latency guarantee is claimed.
+- SHA256: `382ae730a41c69a600e3fd27a16a120db69a4cd1242d316934098917956463f4`.
+- No live installation, uninstall, Outlook shutdown, mailbox action or send was performed. Prior preview limitations still apply.

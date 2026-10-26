@@ -137,6 +137,10 @@ else {
   Write-Host "Publishing self-contained hidden supervisor..."
   Invoke-DotnetPublish -ProjectPath $supervisorProject -PublishDir $supervisorPublishDir
 
+  . (Join-Path $PSScriptRoot 'MailyPackageRuntime.ps1')
+  $runtimeSharing = Compress-MailyPackageRuntime -AppRoot (Join-Path $payloadRoot 'app') -EvidenceRoot (Join-Path $OutputRoot ($packageName + '-shared-runtime-evidence'))
+  Write-Host "Shared runtime package files: $($runtimeSharing.files); bytes avoided: $($runtimeSharing.bytes)."
+
   & (Join-Path $PSScriptRoot 'Bundle-MailyCodexRuntime.ps1') -Destination (Join-Path $payloadRoot 'runtime/codex') -Runtime $Runtime
 }
 
@@ -180,6 +184,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $packageRoot "setup") | Out
 Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\Install-MailyOutlookAddinPackage.ps1") -Destination (Join-Path $packageRoot "setup\install.ps1") -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\Uninstall-MailyOutlookAddinPackage.ps1") -Destination (Join-Path $packageRoot "setup\uninstall.ps1") -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\OutlookShutdown.ps1") -Destination (Join-Path $packageRoot "setup\OutlookShutdown.ps1") -Force
+Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/MailyPackageRuntime.ps1') -Destination (Join-Path $packageRoot 'setup/MailyPackageRuntime.ps1')
 Set-Content -LiteralPath $packageModePath -Value $PackageMode -Encoding ASCII
 $documentsRoot = Join-Path $packageRoot 'docs'
 New-Item -ItemType Directory -Force -Path $documentsRoot | Out-Null
