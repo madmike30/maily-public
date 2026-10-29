@@ -162,6 +162,7 @@ public sealed class OracleResponsesGateway
 			startInfo.Environment["CODEX_HOME"] = config.CodexHome;
 		}
 
+		Maily.Runtime.InstalledAppRuntime.UseChatGptSubscription(startInfo);
 		startInfo.Environment["NO_COLOR"] = "1";
 		return startInfo;
 	}

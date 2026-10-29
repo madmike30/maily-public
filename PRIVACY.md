@@ -1,6 +1,6 @@
 # Privacy and data flow
 
-Maily is a local Outlook add-in with a local backend. It is not an offline AI model. Text required for a requested reply, summary, search, briefing or style-learning operation is sent to the user's signed-in AI provider through the bundled runtime. Provider account policies govern processing and retention; Maily does not promise zero retention by that provider.
+Maily is a local Outlook add-in with a local backend. It is not an offline AI model. Text required for a requested reply, summary, search, briefing or style-learning operation is sent to the user's signed-in AI provider through the existing desktop app runtime. Provider account policies govern processing and retention; Maily does not promise zero retention by that provider.
 
 The feature may use message body, subject, participants, selected search results and the current draft. Search and briefing can process more than one message when explicitly requested. Only use authorized data. Do not use a personal AI account for organization data without permission.
 

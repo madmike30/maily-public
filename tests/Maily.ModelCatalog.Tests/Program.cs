@@ -5,6 +5,14 @@ using Maily.Generation.Contracts;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
+var subscriptionKeys = new[] { "OPENAI_API_KEY", "CODEX_API_KEY", "AZURE_OPENAI_API_KEY" };
+if (Environment.GetEnvironmentVariable("MAILY_SUBSCRIPTION_ENV_TEST") == "1")
+{
+    if (subscriptionKeys.Any(key => Environment.GetEnvironmentVariable(key) is not null) ||
+        Environment.GetEnvironmentVariable("CODEX_HOME") != "synthetic-chatgpt-home")
+        throw new InvalidOperationException("Subscription child environment was not isolated.");
+    if (args.Contains("exec")) { await Console.In.ReadToEndAsync(); Console.WriteLine("Synthetic subscription reply."); return; }
+}
 if (args.Contains("exec"))
 {
     await Console.In.ReadToEndAsync();
@@ -34,6 +42,23 @@ if (args.Contains("app-server"))
         }
     }
     return;
+}
+var previousKeys = subscriptionKeys.ToDictionary(key => key, Environment.GetEnvironmentVariable);
+try
+{
+    foreach (var key in subscriptionKeys) Environment.SetEnvironmentVariable(key, "synthetic-not-a-credential");
+    Environment.SetEnvironmentVariable("MAILY_SUBSCRIPTION_ENV_TEST", "1");
+    var subscriptionConfig = new CodexRuntimeConfig { CodexExecutablePath = Environment.ProcessPath!, CodexHome = "synthetic-chatgpt-home" };
+    var isolatedModels = await new CodexModelListSource().ReadAsync(subscriptionConfig, CancellationToken.None);
+    Check(isolatedModels.Count == 2, "model discovery excludes API keys and preserves configured ChatGPT home");
+    var isolatedReply = await new OracleResponsesGateway(NullLogger<OracleResponsesGateway>.Instance).GenerateReplyAsync(subscriptionConfig, "Synthetic", "Synthetic");
+    Check(isolatedReply == "Synthetic subscription reply.", "generation excludes API keys and preserves configured ChatGPT home");
+    Check(subscriptionKeys.All(key => Environment.GetEnvironmentVariable(key) == "synthetic-not-a-credential"), "child isolation leaves parent environment unchanged");
+}
+finally
+{
+    foreach (var item in previousKeys) Environment.SetEnvironmentVariable(item.Key, item.Value);
+    Environment.SetEnvironmentVariable("MAILY_SUBSCRIPTION_ENV_TEST", null);
 }
 var config = new CodexRuntimeConfig { CodexExecutablePath = Environment.ProcessPath! };
 var models = await new CodexModelListSource().ReadAsync(config, CancellationToken.None);

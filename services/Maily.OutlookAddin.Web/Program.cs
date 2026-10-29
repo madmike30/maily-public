@@ -2,6 +2,7 @@ using Maily.OutlookAddin.Web.Services;
 using Maily.Generation.Contracts;
 using Maily.Generation.Models;
 using Maily.Generation.Services;
+using Maily.Runtime;
 using Maily.OutlookAddin.Web.Logging;
 using Maily.OutlookAddin.Web.Models;
 using System.Diagnostics;
@@ -873,6 +874,10 @@ app.MapPost("/api/outlook/generate-reply", async (
 
 		return Results.Ok(response);
 	}
+	catch (InstalledAppRuntimeUnavailableException)
+	{
+		return Results.Json(new { error = InstalledAppRuntime.MissingGuidance, requestId }, statusCode: StatusCodes.Status503ServiceUnavailable);
+	}
 	catch (Exception)
 	{
 		timer.Stop();
@@ -1004,7 +1009,13 @@ app.MapPost("/api/outlook/rewrite-active-compose", async (
 });
 
 app.MapGet("/api/outlook/models", async (CodexModelCatalog catalog, CodexRuntimeConfigLoader configLoader, HttpContext context) =>
-	Results.Ok(await catalog.GetAsync(configLoader.Load(), context.RequestAborted)));
+{
+	try { return Results.Ok(await catalog.GetAsync(configLoader.Load(), context.RequestAborted)); }
+	catch (InstalledAppRuntimeUnavailableException)
+	{
+		return Results.Ok(new { status = "unavailable", models = Array.Empty<object>(), recommendedModel = (string?)null, message = InstalledAppRuntime.MissingGuidance });
+	}
+});
 
 app.MapGet("/api/outlook/settings", (
 	string? mailboxAddress,
@@ -1636,12 +1647,12 @@ static (bool Ok, object Details, string UserMessage, string RecommendedAction) B
 			? RunCodexProcess(config, "login", "status")
 			: new CodexProcessResult(false, -1, string.Empty, string.Empty, string.Empty);
 		var status = CodexReadiness.Evaluate(version.Started, version.ExitCode,
-			loginStatus.Started, loginStatus.ExitCode, loginStatus.Stdout, loginStatus.Stderr);
+			loginStatus.Started, loginStatus.ExitCode, loginStatus.Stdout, loginStatus.Stderr, codexConfigLoader.UsesInstalledApp, version.Stdout);
 		return (status.Ok, status, status.Message, status.RecommendedAction);
 	}
 	catch (Exception)
 	{
-		var status = CodexReadiness.Evaluate(false, -1, false, -1, string.Empty, string.Empty);
+		var status = CodexReadiness.Evaluate(false, -1, false, -1, string.Empty, string.Empty, codexConfigLoader.UsesInstalledApp);
 		return (false, status, status.Message, status.RecommendedAction);
 	}
 }
@@ -1677,6 +1688,7 @@ static CodexProcessResult RunCodexProcess(CodexRuntimeConfig config, params stri
 		startInfo.Environment["CODEX_HOME"] = config.CodexHome;
 	}
 
+	Maily.Runtime.InstalledAppRuntime.UseChatGptSubscription(startInfo);
 	startInfo.Environment["NO_COLOR"] = "1";
 
 	try
@@ -1813,7 +1825,9 @@ file static class CachedCodexReadiness
 		TimeSpan ttl,
 		Func<(bool Ok, object Details, string UserMessage, string RecommendedAction)> refresh)
 	{
-		var config = codexConfigLoader.Load();
+		CodexRuntimeConfig config;
+		try { config = codexConfigLoader.Load(); }
+		catch (InstalledAppRuntimeUnavailableException) { return refresh(); }
 		var key = string.Join("\n", config.CodexHome, config.CodexExecutablePath, config.Model);
 		var now = DateTimeOffset.UtcNow;
 		lock (Gate)

@@ -20,6 +20,7 @@ public sealed class CodexModelListSource : ICodexModelListSource
             UseShellExecute = false, CreateNoWindow = true, RedirectStandardInput = true,
             RedirectStandardOutput = true, RedirectStandardError = true,
             StandardInputEncoding = new UTF8Encoding(false), StandardOutputEncoding = new UTF8Encoding(false) };
+        Maily.Runtime.InstalledAppRuntime.UseChatGptSubscription(start);
         start.ArgumentList.Add("app-server"); start.ArgumentList.Add("--stdio");
         if (!string.IsNullOrWhiteSpace(config.CodexHome)) start.Environment["CODEX_HOME"] = config.CodexHome;
         using var process = new Process { StartInfo = start };

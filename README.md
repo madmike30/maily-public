@@ -1,16 +1,16 @@
 # Maily
 
-Public preview 1.3.3 reduces the self-contained download size while retaining the refined UI, reply-author/signature safeguards and bundled AI runtime; see [CHANGELOG](CHANGELOG.md).
+Public preview 1.3.4 reuses the installed ChatGPT desktop app runtime and sign-in instead of bundling another Codex runtime; see [CHANGELOG](CHANGELOG.md).
 
 An open-source AI drafting assistant for **classic Outlook on Windows**. Generate a reply, compare it with your current draft, refine it, and apply it only when you are ready. Maily never sends mail automatically.
 
-**Public preview 1.3.3.0.** This is an unsigned, experimental release, not a Microsoft or OpenAI product. Fresh-account Microsoft registration has not been verified across organizations. Organization policy may require administrator deployment. Read the [limitations](docs/RELEASE_NOTES_1.3.3.md) before installing.
+**Public preview 1.3.4.0.** This is an unsigned, experimental release, not a Microsoft or OpenAI product. Fresh-account Microsoft registration has not been verified across organizations. Organization policy may require administrator deployment. Read the [limitations](docs/RELEASE_NOTES_1.3.4.md) before installing.
 
 ## Install only Maily
 
-Download the ZIP and checksum from [Releases](https://github.com/madmike30/maily-public/releases). Extract it and run `MailyOutlookAddinSetup.exe`. You need classic Outlook and an eligible ChatGPT/Codex account. The package includes its application runtimes, so you do not need to install .NET, Node.js or a separate Codex CLI.
+Download the ZIP and checksum from [Releases](https://github.com/madmike30/maily-public/releases). Extract it and run `MailyOutlookAddinSetup.exe`. You need classic Outlook and a compatible ChatGPT desktop app with Codex features, installed and signed in to an eligible account. The package includes its application runtimes, so you do not need to install .NET, Node.js or a separate Codex CLI.
 
-Setup can reuse supported existing sign-in or guide you through sign-in. Approve the Windows localhost-certificate prompt only when you initiated this installation. Microsoft connection is a separate explicit step. [Installation, upgrade and uninstall](docs/INSTALLER.md).
+Setup checks and reuses the desktop app runtime and sign-in. If unavailable, it asks you to open or update that app, sign in and retry. Approve the Windows localhost-certificate prompt only when you initiated this installation. Microsoft connection is a separate explicit step. [Installation, upgrade and uninstall](docs/INSTALLER.md).
 
 ## Use it
 

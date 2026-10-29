@@ -66,6 +66,37 @@ param([string]$InstallerPath = (Join-Path $PSScriptRoot 'Install-MailyOutlookAdd
     if ($reverse) { [array]::Reverse($script:cache) }
     Assert-Equal 'needs-support' (Get-MailyOutlookActivation -Manifest $manifest).status 'Unknown ownership must take priority over user repair in either order'
   }
+  # A local application version bump does not change an otherwise identical registration.
+  $resolvedPackageMode = 'Local'
+  $realTarget = Join-Path $root 'full-target.xml'
+  $realOld = Join-Path $root 'full-old.xml'
+  $realText = [IO.File]::ReadAllText((Join-Path (Split-Path $PSScriptRoot -Parent) 'addin/manifest.xml'))
+  [IO.File]::WriteAllText($realTarget, $realText)
+  $oldText = $realText.Replace('<Version>1.3.4.0</Version>', '<Version>1.3.2.0</Version>')
+  [IO.File]::WriteAllText($realOld, $oldText)
+  $realManifest = Resolve-MailyManifest $realTarget
+  $script:cache=@([pscustomobject]@{installedBy='User';manifestPath=$realOld})
+  Assert-Equal 'verified' (Get-MailyOutlookActivation -Manifest $realManifest).status 'Identical local registration at an older version must allow application upgrade'
+  Assert-Equal $false ((Get-MailyManifestSignature $realTarget) -ceq (Get-MailyManifestSignature $realOld)) 'Installed package identity remains version-strict'
+  $resolvedPackageMode = 'Hosted'
+  Assert-Equal 'repair-required' (Get-MailyOutlookActivation -Manifest $realManifest).status 'Hosted packages never inherit local version compatibility'
+  $resolvedPackageMode = 'Local'
+  foreach ($mutation in @(
+      $oldText.Replace('ReadWriteItem','ReadItem'),
+      $oldText.Replace('MinVersion="1.8"','MinVersion="1.7"'),
+      $oldText.Replace('Maily.Compose.GenerateButton','Maily.Compose.OtherButton'),
+      $oldText.Replace('resid="Maily.Taskpane.Url"','resid="Maily.Summary.Url"'),
+      $oldText.Replace('<Version>1.3.2.0</Version>','<Version>1.3.5.0</Version>'),
+      $oldText.Replace('<Version>1.3.2.0</Version>','<Version>invalid</Version>'),
+      $oldText.Replace('https://localhost:7097','https://example.invalid')
+  )) {
+      [IO.File]::WriteAllText($realOld,$mutation)
+      Assert-Equal 'repair-required' (Get-MailyOutlookActivation -Manifest $realManifest).status 'Permissions, requirements, commands, bindings, downgrades, malformed versions and endpoints must fail closed'
+  }
+  [IO.File]::WriteAllText($realOld, $oldText.Replace('v=20261025ux1','v=20261023release3'))
+  Assert-Equal 'verified' (Get-MailyOutlookActivation -Manifest $realManifest).status 'Compatible older local registration may retain an older pane cache tag'
+  $script:cache=@([pscustomobject]@{installedBy='Unknown';manifestPath=$realOld})
+  Assert-Equal 'needs-support' (Get-MailyOutlookActivation -Manifest $realManifest).status 'Version compatibility never bypasses ownership'
   $waiting=Get-MailyOutlookActivationGuidance -Status 'activation-required' -ManifestPath $target
   if ($waiting -match 'remove|reinstall|retry setup') { throw 'Missing cache must not trigger destructive or repeating installation advice.' }
   if ($waiting -notmatch 'sync|24 hours') { throw 'Missing cache guidance must explain propagation before asking for connection.' }

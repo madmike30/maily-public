@@ -444,8 +444,9 @@ function Remove-InstallFiles {
 
   if ($isHostedPackage) {
     $removedNames = New-Object System.Collections.Generic.List[string]
-    foreach ($name in @("addin", "setup", "MailyOutlookAddinSetup.exe", $packageModeFileName, "package-summary.json")) {
+    foreach ($name in @("runtime", "scripts", "addin", "setup", "MailyOutlookAddinSetup.exe", $packageModeFileName, "ai-runtime-mode.txt", "package-summary.json")) {
       $target = Join-Path $installRootPath $name
+      Assert-ChildPath -Parent $installRootPath -Child $target
       if (Test-Path -LiteralPath $target) {
         Remove-Item -LiteralPath $target -Recurse -Force
         $removedNames.Add($name) | Out-Null
@@ -482,7 +483,7 @@ function Remove-InstallFiles {
   }
 
   $removedNames = New-Object System.Collections.Generic.List[string]
-  foreach ($name in @("app", "runtime", "addin", "scripts", "smoke_data", "certs", "setup", "uninstall.ps1", "MailyOutlookAddinSetup.exe", "package-mode.txt", "package-summary.json")) {
+  foreach ($name in @("app", "runtime", "addin", "scripts", "smoke_data", "certs", "setup", "uninstall.ps1", "MailyOutlookAddinSetup.exe", "package-mode.txt", "ai-runtime-mode.txt", "package-summary.json")) {
     $target = Join-Path $installRootPath $name
     Assert-ChildPath -Parent $installRootPath -Child $target
     if (Test-Path -LiteralPath $target) {

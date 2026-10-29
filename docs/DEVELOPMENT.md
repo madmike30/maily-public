@@ -1,6 +1,6 @@
 # Build and verification
 
-The main components are the browser-based Office.js panes, the ASP.NET local backend, the generation library, Windows setup/supervisor, and bounded Outlook bridge scripts. Recipient installations are self-contained; developers need the pinned .NET SDK in global.json, PowerShell7, Node.js, Git, and Chrome or Edge for browser harnesses.
+The main components are the browser-based Office.js panes, the ASP.NET local backend, the generation library, Windows setup/supervisor, and bounded Outlook bridge scripts. Maily bundles its own application runtimes; the default package requires an installed, signed-in ChatGPT desktop app with its Codex runtime. Developers can opt into the legacy bundled-runtime build with -AiRuntimeMode Bundled; developers need the pinned .NET SDK in global.json, PowerShell7, Node.js, Git, and Chrome or Edge for browser harnesses.
 
 From the repository root:
 

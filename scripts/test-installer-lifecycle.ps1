@@ -246,7 +246,10 @@ try {
   $fakeRuntime = Join-Path $testRoot 'codex.exe'
   [IO.File]::WriteAllText($fakeRuntime, 'fixture only')
   $status = Test-CodexSetup -ExecutablePath $fakeRuntime
-  Assert-True ($status.ok -and ($status | ConvertTo-Json -Depth 5) -notmatch 'synthetic-private-marker') 'Raw authentication output escaped into installer diagnostics.'
+  Assert-True (-not $status.ok -and ($status | ConvertTo-Json -Depth 5) -notmatch 'synthetic-private-marker') 'Ambiguous authentication must be rejected without exposing raw diagnostics.'
+  function Invoke-CodexProcess { return @{ started = $true; exitCode = 0; stdout = 'Logged in using ChatGPT'; stderr = ''; error = '' } }
+  $status = Test-CodexSetup -ExecutablePath $fakeRuntime
+  Assert-True $status.ok 'Exact supported ChatGPT status should authenticate.'
   Write-Host 'PASS authentication readiness retains no raw CLI output'
   function Test-OutlookRunning { return $true }
   function Test-Path { throw 'Unexpected external filesystem/registry access during closed-Outlook guard test.' }

@@ -1,6 +1,7 @@
 param(
   [string]$BuilderPath = (Join-Path $PSScriptRoot 'build-maily-outlook-installer.ps1'),
-  [ValidateSet('Local','Hosted')][string]$PackageMode = 'Local'
+  [ValidateSet('Local','Hosted')][string]$PackageMode = 'Local',
+  [ValidateSet('InstalledApp','Bundled')][string]$AiRuntimeMode = 'InstalledApp'
 )
 $ErrorActionPreference = 'Stop'
 $run = Join-Path $PSScriptRoot ('../output/package-entry-' + [guid]::NewGuid().ToString('N'))
@@ -45,7 +46,7 @@ function dotnet {
   [IO.File]::WriteAllText((Join-Path $destination ($project + '.exe')), 'Synthetic executable: never run.')
   $global:LASTEXITCODE = 0
 }
-& (Join-Path $fixture 'scripts/build.ps1') -OutputRoot (Join-Path $run 'build') -PackageMode $PackageMode -HostedBaseUrl 'https://maily.example.invalid' *> (Join-Path $run 'build.log')
+& (Join-Path $fixture 'scripts/build.ps1') -OutputRoot (Join-Path $run 'build') -PackageMode $PackageMode -AiRuntimeMode $AiRuntimeMode -HostedBaseUrl 'https://maily.example.invalid' *> (Join-Path $run 'build.log')
 $packageName = if ($PackageMode -eq 'Hosted') { 'MailyOutlookAddinHosted-1.3.1.0' } else { 'MailyOutlookAddin-1.3.1.0' }
 $package = Join-Path $run "build/$packageName"
 $publicSummary = Get-Content (Join-Path $package 'package-summary.json') -Raw | ConvertFrom-Json
@@ -62,7 +63,13 @@ foreach ($name in @('DISCLAIMER.md', 'RELEASE_NOTES_1.3.1.md', 'INSTALLER.md', '
 }
 $supportFiles = @('setup/install.ps1', 'setup/uninstall.ps1', 'setup/OutlookShutdown.ps1', 'payload/addin/manifest.xml')
 $supportFiles += @('payload/runtime/atk/node.exe', 'payload/scripts/connect-outlook.cjs', 'payload/scripts/outlook-credential-preflight.cjs')
-if ($PackageMode -eq 'Local') { $supportFiles += @('payload/runtime/codex/codex.exe', 'third-party/codex/NOTICE') }
+if ($PackageMode -eq 'Local' -and $AiRuntimeMode -eq 'Bundled') { $supportFiles += @('payload/runtime/codex/codex.exe', 'third-party/codex/NOTICE') }
+if (([IO.File]::ReadAllText((Join-Path $package 'ai-runtime-mode.txt'))).Trim() -ne $AiRuntimeMode) { throw 'Runtime mode must be explicit in the package.' }
+if ($publicSummary.aiRuntimeMode -ne $AiRuntimeMode) { throw 'Runtime mode metadata mismatch.' }
+if ($AiRuntimeMode -eq 'InstalledApp' -or $PackageMode -eq 'Hosted') {
+  if (Test-Path (Join-Path $package 'payload/runtime/codex')) { throw 'Existing-app package must not carry another Codex runtime.' }
+  if ($publicSummary.bundledCodexVersion) { throw 'Metadata must not claim a bundled runtime.' }
+}
 foreach ($relative in $supportFiles) {
   if (-not (Test-Path -LiteralPath (Join-Path $package $relative))) { throw "Required support file missing: $relative" }
 }

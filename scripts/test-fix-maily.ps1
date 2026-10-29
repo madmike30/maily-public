@@ -50,6 +50,7 @@ Invoke-Check 'cli-quoting' { & $DotnetPath run --project tests/Maily.CliQuoting.
 Invoke-Check 'native-draft' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-native-draft-safety.ps1 }
 Invoke-Check 'provider-privacy' { & $DotnetPath run --project tests/Maily.Privacy.Tests/Maily.Privacy.Tests.csproj }
 Invoke-Check 'model-catalog' { & $DotnetPath run --project tests/Maily.ModelCatalog.Tests/Maily.ModelCatalog.Tests.csproj }
+Invoke-Check 'installed-app-discovery' { & $DotnetPath run --project tests/Maily.InstalledApp.Tests/Maily.InstalledApp.Tests.csproj }
 Invoke-Check 'telemetry-privacy' { & node tests/Maily.Privacy.Tests/telemetry.mjs }
 Invoke-Check 'backend-privacy' { & node tests/Maily.Privacy.Tests/backend-contracts.mjs }
 Invoke-Check 'utf8' { & $DotnetPath run --project tests/Maily.Utf8.Tests/Maily.Utf8.Tests.csproj }
@@ -64,12 +65,15 @@ Invoke-Check 'search-coverage-ui' { & node tests/Maily.SearchCoverage.Tests/sear
 Invoke-Check 'release-folder-mocks' { & pwsh -NoProfile -File scripts/test-outlook-release-folder-mocks.ps1 }
 Invoke-Check 'search-smoke-scope' { & pwsh -NoProfile -File scripts/test-outlook-search-smoke-mocks.ps1 }
 Invoke-Check 'installer-lifecycle' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-lifecycle.ps1 }
+Invoke-Check 'installed-desktop-runtime' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installed-desktop-runtime.ps1 }
+Invoke-Check 'hosted-uninstall' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-hosted-uninstall.ps1 }
 Invoke-Check 'uninstall-completion' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-uninstall-completion.ps1 }
 Invoke-Check 'installer-mailbox-activation' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-mailbox-activation.ps1 }
 Invoke-Check 'installer-asset-upgrade' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-asset-upgrade.ps1 }
 Invoke-Check 'package-retention' { & pwsh -NoProfile -File scripts/test-package-retention.ps1 }
 Invoke-Check 'package-runtime-sharing' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-package-runtime-dedup.ps1 }
 Invoke-Check 'package-entry-local' { & pwsh -NoProfile -File scripts/test-installer-package-entry.ps1 -PackageMode Local }
+Invoke-Check 'package-entry-bundled' { & pwsh -NoProfile -File scripts/test-installer-package-entry.ps1 -PackageMode Local -AiRuntimeMode Bundled }
 Invoke-Check 'package-entry-hosted' { & pwsh -NoProfile -File scripts/test-installer-package-entry.ps1 -PackageMode Hosted }
 Invoke-Check 'installer-timeout' { & powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer-timeout.ps1 }
 Invoke-Check 'installer-lock' { & $DotnetPath run --project tests/Maily.Setup.Lock.Tests/Maily.Setup.Lock.Tests.csproj -- (Join-Path $runRoot 'setup-lock-artifacts') }

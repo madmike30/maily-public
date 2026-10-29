@@ -4,6 +4,8 @@ param(
   [string]$Runtime = "win-x64",
   [ValidateSet("Hosted", "Local")]
   [string]$PackageMode = "Local",
+  [ValidateSet("InstalledApp", "Bundled")]
+  [string]$AiRuntimeMode = "InstalledApp",
   [string]$HostedBaseUrl = "",
   [string]$OutputRoot = "",
   [switch]$NoZip
@@ -141,7 +143,9 @@ else {
   $runtimeSharing = Compress-MailyPackageRuntime -AppRoot (Join-Path $payloadRoot 'app') -EvidenceRoot (Join-Path $OutputRoot ($packageName + '-shared-runtime-evidence'))
   Write-Host "Shared runtime package files: $($runtimeSharing.files); bytes avoided: $($runtimeSharing.bytes)."
 
-  & (Join-Path $PSScriptRoot 'Bundle-MailyCodexRuntime.ps1') -Destination (Join-Path $payloadRoot 'runtime/codex') -Runtime $Runtime
+  if ($AiRuntimeMode -eq 'Bundled') {
+    & (Join-Path $PSScriptRoot 'Bundle-MailyCodexRuntime.ps1') -Destination (Join-Path $payloadRoot 'runtime/codex') -Runtime $Runtime
+  }
 }
 
 & (Join-Path $PSScriptRoot 'Bundle-MailyOutlookConnector.ps1') -Destination (Join-Path $payloadRoot 'runtime/atk') -Runtime $Runtime
@@ -186,6 +190,7 @@ Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\Uninstall-MailyOutlookAddin
 Copy-Item -LiteralPath (Join-Path $repoRoot "scripts\OutlookShutdown.ps1") -Destination (Join-Path $packageRoot "setup\OutlookShutdown.ps1") -Force
 Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts/MailyPackageRuntime.ps1') -Destination (Join-Path $packageRoot 'setup/MailyPackageRuntime.ps1')
 Set-Content -LiteralPath $packageModePath -Value $PackageMode -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $packageRoot 'ai-runtime-mode.txt') -Value $AiRuntimeMode -Encoding ASCII
 $documentsRoot = Join-Path $packageRoot 'docs'
 New-Item -ItemType Directory -Force -Path $documentsRoot | Out-Null
 $releaseNotesVersion = ([version]$manifestVersion).ToString(3)
@@ -195,7 +200,7 @@ foreach ($document in @('DISCLAIMER.md', "RELEASE_NOTES_$releaseNotesVersion.md"
 foreach ($license in @('LICENSE', 'LICENSE.md')) {
   Copy-Item -LiteralPath (Join-Path $repoRoot $license) -Destination (Join-Path $documentsRoot $license) -Force
 }
-if (-not $isHostedPackage) {
+if (-not $isHostedPackage -and $AiRuntimeMode -eq 'Bundled') {
   $noticesRoot = Join-Path $packageRoot 'third-party/codex'
   New-Item -ItemType Directory -Force -Path $noticesRoot | Out-Null
   foreach ($notice in @('LICENSE', 'NOTICE', 'codex-runtime.lock.json')) {
@@ -207,6 +212,8 @@ if (-not $isHostedPackage) {
 # package integrity and Windows Installed Apps removal.
 $connection = if ($isHostedPackage) {
   'Your computer must be able to connect to the Maily service supplied by your pilot organizer.'
+} elseif ($AiRuntimeMode -eq 'InstalledApp') {
+  'You need the ChatGPT desktop app with its Codex features installed and signed in. Setup checks and reuses that app; it does not install another AI runtime.'
 } else {
   'You need a ChatGPT account. Setup will ask you to sign in only if needed. No separate software installation is required.'
 }
@@ -244,7 +251,7 @@ else {
   @(
     "Windows",
     "Microsoft Outlook desktop signed in",
-    "Eligible ChatGPT account; setup guides sign-in using the bundled Codex CLI"
+    $(if ($AiRuntimeMode -eq 'InstalledApp') { "ChatGPT desktop app with Codex runtime installed and signed in" } else { "Eligible ChatGPT account; setup guides sign-in using the bundled Codex CLI" })
   )
 }
 $recipientDoesNotRequire = if ($isHostedPackage) {
@@ -273,6 +280,7 @@ $summary = [pscustomobject]@{
   packageRoot = '.'
   packageName = $packageName
   packageMode = $PackageMode
+  aiRuntimeMode = $AiRuntimeMode
   hostedBaseUrl = if ($isHostedPackage) { $HostedBaseUrl } else { "" }
   manifestVersion = $manifestVersion
   runtime = $Runtime
@@ -282,7 +290,7 @@ $summary = [pscustomobject]@{
   setupExecutable = $setupExeName
   recipientPrerequisites = $recipientPrerequisites
   recipientDoesNotRequire = $recipientDoesNotRequire
-  bundledCodexVersion = if ($isHostedPackage) { $null } else { (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'codex-runtime.lock.json') -Raw | ConvertFrom-Json).version }
+  bundledCodexVersion = if ($isHostedPackage -or $AiRuntimeMode -eq 'InstalledApp') { $null } else { (Get-Content -LiteralPath (Join-Path $PSScriptRoot 'codex-runtime.lock.json') -Raw | ConvertFrom-Json).version }
 }
 if (-not $isHostedPackage) { $summary.recipientDoesNotRequire += 'Separate Codex CLI installation' }
 $zipPath = Join-Path $OutputRoot "$packageName.zip"

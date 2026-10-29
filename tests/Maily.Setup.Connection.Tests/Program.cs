@@ -7,7 +7,35 @@ internal static class ConnectionTests
  {
   if(args.Length>0 && args[0]=="fake") { Fake(args[1],args.ElementAtOrDefault(2)); return; }
   Run().GetAwaiter().GetResult();
-  TestGuide(); TestIntegrity();
+  TestGuide(); TestIntegrity(); TestInstalledApp();
+ }
+ static void TestInstalledApp()
+ {
+  var root=Path.Combine(Path.GetTempPath(),"maily-installed-app-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
+  var local=Path.Combine(root,"synthetic-local");Directory.CreateDirectory(local);
+  File.WriteAllText(Path.Combine(root,"ai-runtime-mode.txt"),"InstalledApp");
+  if(CodexSetupPreflight.AllowsBrowserSignIn(root))throw new Exception("Installed app mode permits browser sign-in mutation");
+  var calls=0;
+  var absent=CodexSetupPreflight.Check(root,local,(path,command)=>{calls++;return (true,0,"Logged in using ChatGPT");});
+  if(absent.Ok||calls!=0||!absent.RecommendedAction.Contains("desktop app"))throw new Exception("Missing app did not fail before process probe");
+  var executable=Path.Combine(local,"OpenAI","ChatGPT","bin","v1","codex.exe");Directory.CreateDirectory(Path.GetDirectoryName(executable)!);File.WriteAllText(executable,"synthetic; never execute");
+  var signedOut=CodexSetupPreflight.Check(root,local,(path,command)=>{calls++;return command=="--version"?(true,0,"codex-cli 0.164.0-alpha.11.1"):(true,1,"PRIVATE synthetic provider output");});
+  if(signedOut.Ok||signedOut.ToDisplayText().Contains("PRIVATE")||!signedOut.RecommendedAction.Contains("sign in"))throw new Exception("Signed-out app guidance/privacy mismatch");
+  var ready=CodexSetupPreflight.Check(root,local,(path,command)=>(true,0,command=="--version"?"codex-cli 0.164.0-alpha.11.1":"Logged in using ChatGPT"));
+  if(!ready.Ok||ready.CodexExecutablePath!=executable)throw new Exception("Installed app sign-in not recognized");
+  var newer=Path.Combine(local,"OpenAI","ChatGPT","bin","v2","codex.exe");Directory.CreateDirectory(Path.GetDirectoryName(newer)!);File.WriteAllText(newer,"synthetic broken runtime");File.SetLastWriteTimeUtc(newer,DateTime.UtcNow.AddMinutes(1));
+  var probed=new List<string>();
+  var brokenLatest=CodexSetupPreflight.Check(root,local,(path,command)=>{probed.Add(path);return path==newer?(true,1,"unavailable"):(true,0,command=="--version"?"codex-cli 0.164.0":"Logged in using ChatGPT");});
+  if(brokenLatest.Ok||probed.Count!=1||probed[0]!=newer)throw new Exception("Setup approved an older runtime than generation would select");
+  var files=new[]{"ai-runtime-mode.txt","setup/install.ps1","setup/uninstall.ps1","setup/OutlookShutdown.ps1","payload/addin/manifest.xml","payload/runtime/atk/node.exe","payload/runtime/atk/atk/cli.js","payload/scripts/connect-outlook.cjs","payload/scripts/outlook-credential-preflight.cjs","payload/app/Maily.OutlookAddin.Web/Maily.OutlookAddin.Web.exe"};
+  var inventory=new List<object>();
+  foreach(var file in files){var target=Path.Combine(root,file);Directory.CreateDirectory(Path.GetDirectoryName(target)!);if(file!="ai-runtime-mode.txt")File.WriteAllText(target,"synthetic");var bytes=File.ReadAllBytes(target);inventory.Add(new{path=file,bytes=bytes.Length,sha256=Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes))});}
+  var inventoryPath=Path.Combine(root,"SHA256SUMS.json");File.WriteAllText(inventoryPath,System.Text.Json.JsonSerializer.Serialize(inventory));
+  PackageIntegrity.Verify(root,false);
+  File.WriteAllText(inventoryPath,System.Text.Json.JsonSerializer.Serialize(inventory.Skip(1)));
+  var rejected=false;try{PackageIntegrity.Verify(root,false);}catch(InvalidOperationException){rejected=true;}
+  if(!rejected)throw new Exception("Unverified runtime-mode marker accepted");
+  Console.WriteLine("PASS installed app missing/signed-out/ready preflight, no browser sign-in, compact integrity and verified mode marker");
  }
  static void TestGuide()
  {

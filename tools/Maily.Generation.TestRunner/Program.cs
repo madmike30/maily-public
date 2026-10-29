@@ -542,6 +542,10 @@ RunAsync("summary language failure returns retryable error instead of invented s
 });
 Run("automatic language summary follows email instead of typed reply", () =>
 {
+    var systemMethod = typeof(OutlookInsightsService).GetMethod("BuildInsightsSystemPrompt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+    var systemPrompt = (string)systemMethod.Invoke(null, ["thread-summary"])!;
+    AssertContains("email_body", systemPrompt);
+    AssertContains("draft_context must never determine", systemPrompt);
     var method = typeof(OutlookInsightsService).GetMethod("BuildSummaryPrompt", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
     var prompt = (string)method.Invoke(null, [new OutlookThreadSummaryRequest {
         BodyText = "שלום לכולם אנא אשרו את התוכנית המעודכנת", UserDraftText = "I will confirm tomorrow.", Subject = "Project plan"
@@ -549,6 +553,8 @@ Run("automatic language summary follows email instead of typed reply", () =>
     AssertContains("appears to be Hebrew", prompt);
     AssertContains("Ignore the typed reply language", prompt);
     AssertContains("saved language settings and writing samples do not override it", prompt);
+    AssertContains("<email_body>", prompt);
+    AssertContains("<draft_context>", prompt);
 });
 Run("automatic language reply prioritizes typed text over incoming email", () =>
 {

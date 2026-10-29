@@ -54,6 +54,7 @@ $taskName = "MailyOutlookAddinHostWatcher"
 $uninstallKeyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\MailyOutlookAddin"
 $setupExeName = "MailyOutlookAddinSetup.exe"
 $packageModeFileName = "package-mode.txt"
+$aiRuntimeModeFileName = "ai-runtime-mode.txt"
 $resolvedCodexExecutablePath = ""
 $upgradeSnapshot = $null
 $applicationMutationStarted = $false
@@ -229,6 +230,9 @@ function Invoke-CodexProcess {
     else {
       $startInfo.Environment["CODEX_HOME"] = $ResolvedCodexHome
     }
+    foreach ($apiKeyName in @('OPENAI_API_KEY', 'CODEX_API_KEY', 'AZURE_OPENAI_API_KEY')) {
+      $startInfo.Environment.Remove($apiKeyName) | Out-Null
+    }
     $startInfo.Environment["NO_COLOR"] = "1"
 
     $process = [System.Diagnostics.Process]::Start($startInfo)
@@ -304,12 +308,24 @@ function Test-CodexSetup {
   $loginStatusOutput = ""
   $loginStatusExitCode = -1
   $loginStatusOk = $false
-  if ($codexCommandFound) {
+  $runtimeSupported = $true
+  if ($codexCommandFound -and $resolvedAiRuntimeMode -eq 'InstalledApp') {
+    $runtimeSupported = $false
+    $versionCheck = Invoke-CodexProcess -ExecutablePath $resolvedExecutable -Arguments @('--version') -ResolvedCodexHome $ResolvedCodexHome
+    $versionOutput = ((@($versionCheck.stdout, $versionCheck.stderr, $versionCheck.error) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join [Environment]::NewLine).Trim()
+    if ($versionCheck.started -and $versionCheck.exitCode -eq 0 -and $versionOutput -match '^codex-cli (?<version>\d+\.\d+\.\d+)(?<prerelease>-[0-9A-Za-z.-]+)?$') {
+      try {
+        $parsedVersion = [version]$Matches.version
+        $runtimeSupported = $parsedVersion -gt [version]'0.151.0' -or ($parsedVersion -eq [version]'0.151.0' -and -not $Matches.prerelease)
+      } catch { $runtimeSupported = $false }
+    }
+  }
+  if ($codexCommandFound -and $runtimeSupported) {
     $loginStatus = Invoke-CodexProcess -ExecutablePath $resolvedExecutable -Arguments @("login", "status") -ResolvedCodexHome $ResolvedCodexHome
     $loginStatusOutput = (@($loginStatus.stdout, $loginStatus.stderr, $loginStatus.error) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) -join [Environment]::NewLine
     $loginStatusOutput = $loginStatusOutput.Trim()
     $loginStatusExitCode = [int]$loginStatus.exitCode
-    $loginStatusOk = [bool]$loginStatus.started -and ($loginStatusExitCode -eq 0) -and ($loginStatusOutput -match "(?i)logged in") -and ($loginStatusOutput -match "(?i)chatgpt")
+    $loginStatusOk = [bool]$loginStatus.started -and ($loginStatusExitCode -eq 0) -and [string]::Equals($loginStatusOutput, 'Logged in using ChatGPT', [StringComparison]::OrdinalIgnoreCase)
   }
 
   if ($loginStatusOutput.Length -gt 1200) {
@@ -323,6 +339,9 @@ function Test-CodexSetup {
   }
   elseif ($accessDenied) {
     "Windows denied execution of the AI runtime. Obtain a complete Maily package and check your organization's application policy."
+  }
+  elseif (-not $runtimeSupported) {
+    "Update the ChatGPT desktop app, open it and sign in, then retry Maily setup. This app runtime is not compatible."
   }
   elseif (-not $loginStatusOk) {
     "ChatGPT sign-in is not complete. Open MailyOutlookAddinSetup.exe and click Install for guided browser sign-in."
@@ -369,7 +388,40 @@ function Add-CodexCandidate {
   }) | Out-Null
 }
 
+function Resolve-MailyAiRuntimeMode {
+  $marker = Join-Path $packageRoot 'ai-runtime-mode.txt'
+  if (-not (Test-Path -LiteralPath $marker -PathType Leaf)) { return 'Bundled' }
+  $mode = [IO.File]::ReadAllText($marker).Trim()
+  if ($mode -cnotin @('InstalledApp', 'Bundled')) { throw 'Invalid AI runtime mode. Obtain a complete Maily package.' }
+  return $mode
+}
+
+function Get-MailyInstalledAppCandidates {
+  $found = @()
+  foreach ($app in @('Codex', 'ChatGPT')) {
+    $bin = Join-Path $env:LOCALAPPDATA ("OpenAI/$app/bin")
+    if (-not (Test-Path -LiteralPath $bin -PathType Container)) { continue }
+    try { Assert-MailyUnredirectedPath -Path $bin } catch { continue }
+    $paths = @((Join-Path $bin 'codex.exe'))
+    foreach ($directory in Get-ChildItem -LiteralPath $bin -Directory -ErrorAction SilentlyContinue) {
+      if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+      $paths += Join-Path $directory.FullName 'codex.exe'
+    }
+    foreach ($path in $paths) {
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+      try { Assert-MailyUnredirectedPath -Path $path } catch { continue }
+      $found += Get-Item -LiteralPath $path
+    }
+  }
+  foreach ($file in $found | Sort-Object @{Expression='LastWriteTimeUtc';Descending=$true}, FullName) {
+    [pscustomobject]@{ path=$file.FullName; source='installed-desktop-app' }
+  }
+}
+
 function Get-CodexCliCandidates {
+  # Match the backend's dynamic resolver: an unusable current app must fail,
+  # rather than validating an older executable that the backend will not use.
+  if ($resolvedAiRuntimeMode -eq 'InstalledApp') { return @(Get-MailyInstalledAppCandidates | Select-Object -First 1) }
   $bundledRuntime = Join-Path $payloadRoot "runtime\codex\codex.exe"
   if (Test-Path -LiteralPath $bundledRuntime -PathType Leaf) {
     return @([pscustomobject]@{ path = $bundledRuntime; source = "bundled" })
@@ -456,7 +508,11 @@ function Resolve-RunnableCodexCli {
   }
 
   $last = if ($attempts.Count -gt 0) { $attempts[$attempts.Count - 1] } else { $null }
-  $message = if ($attempts.Count -eq 0) {
+  $message = if ($resolvedAiRuntimeMode -eq 'InstalledApp') {
+    if ($attempts.Count -eq 0) { 'ChatGPT desktop app runtime was not found. Install or update the ChatGPT desktop app, open it and sign in, then retry Maily setup.' }
+    else { 'Open the ChatGPT desktop app and sign in with ChatGPT, then retry Maily setup. If the app runtime cannot start, update the desktop app or check your organization application policy.' }
+  }
+  elseif ($attempts.Count -eq 0) {
     "Maily's AI runtime is missing. Obtain the complete Maily installer package."
   }
   elseif (@($attempts | Where-Object { $_.accessDenied }).Count -gt 0) {
@@ -683,7 +739,7 @@ function Test-MailyPackageIntegrity {
 
 function Get-MailyManagedNames {
   # User profiles and logs are never removed as part of replacing an application version.
-  return @('app', 'runtime', 'addin', 'scripts', 'smoke_data', 'setup', 'MailyOutlookAddinSetup.exe', 'package-mode.txt', 'uninstall.ps1', 'package-summary.json')
+  return @('app', 'runtime', 'addin', 'scripts', 'smoke_data', 'setup', 'MailyOutlookAddinSetup.exe', 'package-mode.txt', 'ai-runtime-mode.txt', 'uninstall.ps1', 'package-summary.json')
 }
 
 function Get-MailyPathAttributes {
@@ -1196,35 +1252,65 @@ function Remove-MailyOutlookCache {
 }
 
 function Get-MailyManifestSignature {
-  param([Parameter(Mandatory=$true)][string]$Path)
+  param([Parameter(Mandatory=$true)][string]$Path, [switch]$IgnoreVersion)
   $settings = New-Object System.Xml.XmlReaderSettings
   $settings.DtdProcessing = [System.Xml.DtdProcessing]::Prohibit
   $settings.XmlResolver = $null
+  $settings.IgnoreWhitespace = $true
+  $settings.IgnoreComments = $true
   $reader = [System.Xml.XmlReader]::Create($Path, $settings)
   try {
     $document = New-Object System.Xml.XmlDocument
     $document.XmlResolver = $null
     $document.Load($reader)
-    $id = $document.SelectSingleNode('/*/*[local-name()="Id"]').InnerText.Trim()
-    $version = $document.SelectSingleNode('/*/*[local-name()="Version"]').InnerText.Trim()
-    $urls = @($document.SelectNodes('//@DefaultValue') | ForEach-Object {
-      if ($_.Value -match '^https?://') {
-        $uri = [Uri]$_.Value
-        # Local pane HTML is served no-store and references revisioned assets.
-        # Updating only its cache tag does not change mailbox registration.
-        # Hosted URLs and all other query parameters remain exact comparisons.
+    $ids = @($document.SelectNodes('/*/*[local-name()="Id"]'))
+    $versions = @($document.SelectNodes('/*/*[local-name()="Version"]'))
+    if ($ids.Count -ne 1 -or $versions.Count -ne 1 -or -not $ids[0].InnerText.Trim()) { throw 'Incomplete Outlook manifest.' }
+    $parsedVersion = [version]$versions[0].InnerText.Trim()
+    if ($parsedVersion.Revision -lt 0) { throw 'Outlook manifest version must contain four parts.' }
+    if ($IgnoreVersion) { $versions[0].InnerText = '0.0.0.0' }
+    $urlCount = 0
+    foreach ($attribute in $document.SelectNodes('//@DefaultValue')) {
+      if ($attribute.Value -match '^https?://') {
+        $urlCount++
+        $uri = [Uri]$attribute.Value
+        # Only the established no-store local pane cache tag is compatible.
+        # Preserve every other attribute, element, binding, permission and URL.
         if ($uri.Scheme -eq 'https' -and $uri.IsLoopback -and $uri.Port -eq 7097 -and $uri.AbsolutePath -match '^/addin/[^/]+\.html$') {
           $builder = New-Object System.UriBuilder($uri)
           $builder.Query = (@($uri.Query.TrimStart('?').Split('&') | Where-Object { $_ -and $_ -cnotmatch '^v=' }) -join '&')
-          $builder.Uri.AbsoluteUri
+          $attribute.Value = $builder.Uri.AbsoluteUri
         }
-        else { $_.Value }
       }
-    } | Sort-Object -Unique)
-    if (-not $id -or -not $version -or $urls.Count -eq 0) { throw 'Incomplete Outlook manifest.' }
-    return ($id.ToLowerInvariant() + "`n" + $version + "`n" + ($urls -join "`n"))
+    }
+    if ($urlCount -eq 0) { throw 'Incomplete Outlook manifest.' }
+    # Deliberately conservative full-document comparison: cosmetic prefix or
+    # attribute-order differences can require repair, but no manifest field is lost.
+    return $document.DocumentElement.OuterXml
   }
   finally { $reader.Dispose() }
+}
+
+function Test-MailyLocalRegistrationCompatibility {
+  param([Parameter(Mandatory=$true)][string]$RegisteredPath, [Parameter(Mandatory=$true)][string]$IncomingPath)
+  if ($resolvedPackageMode -ne 'Local') { return $false }
+  # Signatures are securely parsed, complete documents with four-part versions.
+  $registered = New-Object System.Xml.XmlDocument
+  $registered.XmlResolver = $null
+  $registered.LoadXml((Get-MailyManifestSignature -Path $RegisteredPath))
+  $incoming = New-Object System.Xml.XmlDocument
+  $incoming.XmlResolver = $null
+  $incoming.LoadXml((Get-MailyManifestSignature -Path $IncomingPath))
+  if ([version]$registered.DocumentElement.Version -gt [version]$incoming.DocumentElement.Version) { return $false }
+  # Local mode alone is insufficient: the candidate must actually contain
+  # the known localhost pane endpoint, not a hosted manifest mislabeled Local.
+  $paneUrls = @($incoming.SelectNodes('//*[local-name()="SourceLocation"]/@DefaultValue'))
+  if ($paneUrls.Count -eq 0) { return $false }
+  foreach ($attribute in $paneUrls) {
+    $uri = [Uri]$attribute.Value
+    if ($uri.Scheme -ne 'https' -or -not $uri.IsLoopback -or $uri.Port -ne 7097 -or $uri.AbsolutePath -notmatch '^/addin/[^/]+\.html$') { return $false }
+  }
+  return (Get-MailyManifestSignature -Path $RegisteredPath -IgnoreVersion) -ceq (Get-MailyManifestSignature -Path $IncomingPath -IgnoreVersion)
 }
 
 function Get-MailyOutlookActivation {
@@ -1240,11 +1326,11 @@ function Get-MailyOutlookActivation {
   }
   foreach ($copy in $copies) {
     try {
-      if ((Get-MailyManifestSignature -Path $copy.manifestPath) -cne $expected) { throw 'Manifest differs.' }
+      if ((Get-MailyManifestSignature -Path $copy.manifestPath) -cne $expected -and -not (Test-MailyLocalRegistrationCompatibility -RegisteredPath $copy.manifestPath -IncomingPath $Manifest.Path)) { throw 'Manifest differs.' }
     }
     catch { return [pscustomobject]@{ status='repair-required'; detail='Outlook has an outdated or unreadable Maily mailbox registration. Replacement has not started.' } }
   }
-  return [pscustomobject]@{ status='verified'; detail='Outlook cached mailbox registration matches this package identity, version and endpoints. Local frontend cache tags may differ; updated HTML loads the current assets. Open a new draft to confirm the commands are visible.' }
+  return [pscustomobject]@{ status='verified'; detail='Outlook cached mailbox registration is compatible with this package. A local version or pane cache tag may be older only when the remaining complete manifest matches; updated HTML loads the current assets. Open a new draft to confirm the commands are visible.' }
 }
 
 function Get-MailyActivationSignal {
@@ -1488,7 +1574,21 @@ function Write-InstallState {
   return $statePath
 }
 
+function Get-MailyRequiredPayloadFiles {
+  if ($isHostedPackage) { return @('addin\manifest.xml') }
+  $required = @(
+    'app\Maily.OutlookAddin.Web\Maily.OutlookAddin.Web.exe',
+    'app\Maily.OutlookAddin.Supervisor\Maily.OutlookAddin.Supervisor.exe',
+    'addin\manifest.xml', 'scripts\outlook-bridge.ps1',
+    'smoke_data\prompts\prompt-system.md', 'smoke_data\prompts\prompt-iterate-on-draft.md',
+    'smoke_data\prompts\email-samples.md'
+  )
+  if ($resolvedAiRuntimeMode -ne 'InstalledApp') { $required += 'runtime\codex\codex.exe' }
+  return $required
+}
+
 $resolvedPackageMode = Resolve-PackageMode
+$resolvedAiRuntimeMode = Resolve-MailyAiRuntimeMode
 $isHostedPackage = $resolvedPackageMode -eq "Hosted"
 
 try {
@@ -1499,21 +1599,7 @@ try {
       throw "Package payload was not found at $payloadRoot. Build the installer package first."
     }
 
-    $required = if ($isHostedPackage) {
-      @("addin\manifest.xml")
-    }
-    else {
-      @(
-        "app\Maily.OutlookAddin.Web\Maily.OutlookAddin.Web.exe",
-        "app\Maily.OutlookAddin.Supervisor\Maily.OutlookAddin.Supervisor.exe",
-        "runtime\codex\codex.exe",
-        "addin\manifest.xml",
-        "scripts\outlook-bridge.ps1",
-        "smoke_data\prompts\prompt-system.md",
-        "smoke_data\prompts\prompt-iterate-on-draft.md",
-        "smoke_data\prompts\email-samples.md"
-      )
-    }
+    $required = @(Get-MailyRequiredPayloadFiles)
     $missing = @($required | Where-Object { -not (Test-Path -LiteralPath (Join-Path $payloadRoot $_)) })
     if ($missing.Count -gt 0) {
       throw "Package is missing required payload files: $($missing -join ', ')"
@@ -1602,14 +1688,15 @@ try {
       Add-Step -Name "codex-setup" -Status "failed" -Detail $codexCheck.message -Data $codexCheck
       throw $codexCheck.message
     }
-    $resolvedCodexExecutablePath = if (-not [string]::IsNullOrWhiteSpace([string]$codexCheck.codexCommandPath)) {
+    $resolvedCodexExecutablePath = if ($resolvedAiRuntimeMode -eq 'InstalledApp') { 'installed-app' }
+    elseif (-not [string]::IsNullOrWhiteSpace([string]$codexCheck.codexCommandPath)) {
       [string]$codexCheck.codexCommandPath
     }
     else {
       [string]$codexCheck.codexExecutablePath
     }
     Add-Step -Name "codex-setup" -Status "passed" -Detail $codexCheck.message -Data $codexCheck
-    Add-Step -Name "codex-path" -Status "skipped" -Detail "Maily uses an explicit runtime path; the user's PATH is unchanged."
+    Add-Step -Name "codex-path" -Status "skipped" -Detail "Maily uses the verified AI runtime; the user's PATH is unchanged."
   }
 
   if ($CloseOutlook) {
@@ -1699,11 +1786,12 @@ try {
     else {
       Set-Content -LiteralPath (Join-Path $installRootPath $packageModeFileName) -Value $resolvedPackageMode -Encoding ASCII
     }
+    Set-Content -LiteralPath (Join-Path $installRootPath $aiRuntimeModeFileName) -Value $resolvedAiRuntimeMode -Encoding ASCII
 
     @{ installRoot = $installRootPath; copiedPayloadDirectories = $payloadDirectories }
   } | Out-Null
 
-  if (-not $isHostedPackage -and (Test-Path -LiteralPath (Join-Path $payloadRoot "runtime\codex\codex.exe") -PathType Leaf)) {
+  if (-not $isHostedPackage -and $resolvedAiRuntimeMode -ne 'InstalledApp' -and (Test-Path -LiteralPath (Join-Path $payloadRoot "runtime\codex\codex.exe") -PathType Leaf)) {
     $resolvedCodexExecutablePath = Join-Path $installRootPath "runtime\codex\codex.exe"
     if (-not (Test-Path -LiteralPath $resolvedCodexExecutablePath -PathType Leaf)) {
       throw "The bundled AI runtime was not copied successfully."

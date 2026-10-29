@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Text;
 using System.Text.Json;
 using System.Windows.Forms;
+using Maily.Runtime;
 
 namespace Maily.OutlookAddin.Setup;
 
@@ -319,7 +320,7 @@ internal sealed class SetupForm : Form
 					: "Remove Maily from this PC. Its Outlook account entry may need separate removal.")
 				: (IsHostedPackage
 					? "A hosted, per-user Outlook desktop registration. No local backend, Codex setup, certificates, or background startup are installed."
-					: "Email assistance in classic Outlook. Setup includes everything Maily needs."),
+					: CodexSetupPreflight.DescribeRuntime()),
 			AutoSize = false,
 			Location = new Point(30, 64),
 			Size = new Size(700, 42)
@@ -639,7 +640,7 @@ internal sealed class SetupForm : Form
 			statusLabel.Text = "Checking existing ChatGPT sign-in...";
 			var codexStatus = await Task.Run(CodexSetupPreflight.Check);
 			if (IsDisposed) return;
-			if (!codexStatus.Ok && File.Exists(codexStatus.CodexExecutablePath))
+			if (!codexStatus.Ok && CodexSetupPreflight.AllowsBrowserSignIn() && File.Exists(codexStatus.CodexExecutablePath))
 			{
 				detailsBox.Text = CodexSetupPreflight.DescribeInstalledApps() + Environment.NewLine +
 					"Existing authentication was not available. Sign in securely in your browser; Maily does not read or copy credentials.";
@@ -1058,22 +1059,39 @@ internal sealed record CodexSetupStatus(
 
 internal static class CodexSetupPreflight
 {
-	public static CodexSetupStatus Check()
+	public static bool UsesInstalledApp => InstalledAppRuntime.ReadPackageMode(AppContext.BaseDirectory) == "InstalledApp";
+	internal static bool AllowsBrowserSignIn(string? packageRoot = null) => InstalledAppRuntime.ReadPackageMode(packageRoot ?? AppContext.BaseDirectory) != "InstalledApp";
+	public static string DescribeRuntime()
 	{
+		try { return UsesInstalledApp ? "Email assistance in classic Outlook. Requires the ChatGPT or Codex desktop app, already installed and signed in." : "Email assistance in classic Outlook. Setup includes everything Maily needs."; }
+		catch (InvalidOperationException) { return "Package information needs attention. Extract a complete Maily installer ZIP before continuing."; }
+	}
+	public static CodexSetupStatus Check() => Check(AppContext.BaseDirectory, null, null);
+
+	internal static CodexSetupStatus Check(string packageRoot, string? localAppData, Func<string, string, (bool Started, int ExitCode, string Output)>? statusProbe)
+	{
+		var installedApp = InstalledAppRuntime.ReadPackageMode(packageRoot) == "InstalledApp";
 		var codexHome = ResolveCodexHome();
 		var attempts = new List<string>();
 		var selectedPath = string.Empty;
 		var selectedOutput = string.Empty;
 		var accessDenied = false;
 
-		foreach (var candidate in GetCodexCandidates())
+		// Verify exactly the runtime generation will resolve; never approve an older fallback.
+		foreach (var candidate in installedApp ? InstalledAppRuntime.GetCandidates(localAppData).Take(1) : GetCodexCandidates())
 		{
-			var loginStatus = RunCodex(candidate, codexHome, "login", "status");
-			var output = Truncate(CombineOutput(loginStatus.Stdout, loginStatus.Stderr, loginStatus.Error), 1200);
-			var loggedIn = loginStatus.Started &&
-				loginStatus.ExitCode == 0 &&
-				output.Contains("Logged in", StringComparison.OrdinalIgnoreCase) &&
-				output.Contains("ChatGPT", StringComparison.OrdinalIgnoreCase);
+			if (installedApp)
+			{
+				var version = Probe(candidate, "--version");
+				if (!version.Started || version.ExitCode != 0 || !InstalledAppRuntime.IsSupportedVersion(version.Output))
+				{
+					attempts.Add("Desktop app runtime requires an update.");
+					break;
+				}
+			}
+			var loginStatus = Probe(candidate, "login");
+			var output = Truncate(loginStatus.Output, 1200);
+			var loggedIn = InstalledAppRuntime.IsChatGptLogin(loginStatus.Started, loginStatus.ExitCode, output);
 			if (loginStatus.Started && loginStatus.ExitCode != -1 && string.IsNullOrWhiteSpace(selectedPath)) selectedPath = candidate;
 			accessDenied |= output.Contains("Access is denied", StringComparison.OrdinalIgnoreCase);
 			attempts.Add($"{candidate}: {(loggedIn ? "ready" : output.Split(Environment.NewLine).FirstOrDefault() ?? "not ready")}");
@@ -1088,13 +1106,13 @@ internal static class CodexSetupPreflight
 		var missing = new List<string>();
 		if (string.IsNullOrWhiteSpace(selectedOutput) && attempts.Count == 0)
 		{
-			missing.Add("Runnable Codex CLI");
+			missing.Add(installedApp ? "ChatGPT or Codex desktop app with an available runtime" : "Runnable Codex CLI");
 		}
 		else if (string.IsNullOrWhiteSpace(selectedOutput))
 		{
 			missing.Add(accessDenied
 				? "Runnable Codex CLI for background add-in use"
-				: "ChatGPT sign-in via codex login");
+				: installedApp ? "ChatGPT sign-in in the desktop app" : "ChatGPT sign-in via codex login");
 		}
 
 		if (missing.Count == 0)
@@ -1104,7 +1122,7 @@ internal static class CodexSetupPreflight
 				codexHome,
 				selectedPath,
 				selectedOutput,
-				"Codex CLI is ready and signed in with ChatGPT.",
+				installedApp ? "Your desktop app is ready and signed in with ChatGPT." : "Codex CLI is ready and signed in with ChatGPT.",
 				string.Empty,
 				missing);
 		}
@@ -1114,13 +1132,20 @@ internal static class CodexSetupPreflight
 			codexHome,
 			selectedPath,
 			string.Empty,
-			accessDenied
+			installedApp ? "Maily could not verify the desktop app's ChatGPT connection." : accessDenied
 				? "Codex desktop is installed, but Windows denied direct execution of its packaged CLI from the Maily add-in backend."
 				: "Maily needs a supported ChatGPT sign-in before generating replies, summaries, search answers, or briefings.",
-			accessDenied
+			installedApp ? InstalledAppRuntime.MissingGuidance : accessDenied
 				? "The Maily runtime could not start. Obtain a complete Maily package and check your organization's application policy."
 				: "Click Install to retry browser sign-in. If the runtime is missing, obtain a complete Maily package. No separate Codex installation is required.",
 			missing);
+
+		(bool Started, int ExitCode, string Output) Probe(string candidate, string command)
+		{
+			if (statusProbe is not null) return statusProbe(candidate, command);
+			var value = command == "--version" ? RunCodex(candidate, codexHome, "--version") : RunCodex(candidate, codexHome, "login", "status");
+			return (value.Started, value.ExitCode, CombineOutput(value.Stdout, value.Stderr, value.Error));
+		}
 	}
 
 	private static IReadOnlyList<string> GetCodexCandidates()
@@ -1190,6 +1215,7 @@ internal static class CodexSetupPreflight
 
 	public static string DescribeInstalledApps()
 	{
+		if (UsesInstalledApp) return "Maily reuses the installed desktop app and its existing ChatGPT sign-in.";
 		// Installation is only a hint. Only the supported runtime login-status check establishes authentication.
 		var packages = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Packages");
 		try
@@ -1205,6 +1231,7 @@ internal static class CodexSetupPreflight
 
 	public static async Task SignInAsync(string executablePath, CancellationToken cancellationToken)
 	{
+		if (!AllowsBrowserSignIn()) throw new InvalidOperationException(InstalledAppRuntime.MissingGuidance);
 		var startInfo = CreateCodexStartInfo(executablePath, ["login"]);
 		var codexHome = ResolveCodexHome();
 		if (!string.IsNullOrWhiteSpace(codexHome)) startInfo.Environment["CODEX_HOME"] = codexHome;
@@ -1246,6 +1273,7 @@ internal static class CodexSetupPreflight
 	private static CodexProcessResult RunCodex(string executablePath, string codexHome, params string[] arguments)
 	{
 		var startInfo = CreateCodexStartInfo(executablePath, arguments);
+		InstalledAppRuntime.UseChatGptSubscription(startInfo);
 		if (!string.IsNullOrWhiteSpace(codexHome))
 		{
 			startInfo.Environment["CODEX_HOME"] = codexHome;
@@ -1482,7 +1510,13 @@ internal static class PackageIntegrity
 				throw new InvalidOperationException($"Package verification failed for {relative}. Extract a fresh copy of the complete Maily ZIP and retry.");
 		}
 		var required = new List<string> { "setup/install.ps1", "setup/uninstall.ps1", "setup/OutlookShutdown.ps1", "payload/addin/manifest.xml", "payload/runtime/atk/node.exe", "payload/runtime/atk/atk/cli.js", "payload/scripts/connect-outlook.cjs", "payload/scripts/outlook-credential-preflight.cjs" };
-		if (!hosted) required.AddRange(["payload/app/Maily.OutlookAddin.Web/Maily.OutlookAddin.Web.exe", "payload/runtime/codex/codex.exe"]);
+		var runtimeMode = InstalledAppRuntime.ReadPackageMode(root);
+		if (File.Exists(Path.Combine(root, "ai-runtime-mode.txt"))) required.Add("ai-runtime-mode.txt");
+		if (!hosted)
+		{
+			required.Add("payload/app/Maily.OutlookAddin.Web/Maily.OutlookAddin.Web.exe");
+			if (runtimeMode == "Bundled") required.Add("payload/runtime/codex/codex.exe");
+		}
 		foreach (var relative in required)
 			if (!covered.Contains(Path.GetFullPath(Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))))) throw new InvalidOperationException($"Required file is not covered by package checksums: {relative}.");
 		foreach (var subtree in new[] { "payload", "setup" })
