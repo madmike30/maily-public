@@ -2,7 +2,7 @@
 
 ## Requirements
 
-Windows x64, classic Outlook desktop signed in, internet access and the ChatGPT desktop app with Codex features installed and signed in to an eligible account. Obtain organizational permission before processing work email. New Outlook, macOS and Outlook on the web are not supported by this preview.
+Windows x64, classic Outlook desktop signed in, internet access and the ChatGPT desktop app with Codex features installed and signed in to an eligible account. Obtain organizational permission before processing work email. New Outlook, macOS and Outlook on the web are not supported by this release.
 
 Use only the ZIP from this repository's Releases page. Compare its SHA256 with the published checksum (`Get-FileHash <download.zip> -Algorithm SHA256`). The release is unsigned; checksum matching establishes artifact consistency, not publisher identity or a guarantee of safety.
 

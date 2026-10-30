@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.3.4.0 — release candidate (unreleased)
+## 1.3.4.0 — 2026-10-30
 
 - Default package reuses the installed ChatGPT desktop app runtime and sign-in; no bundled Codex runtime or ChatGPT installer.
 - Verify app/account readiness and rediscover updated runtime paths. Preserve shared app installation and authentication on Maily removal.

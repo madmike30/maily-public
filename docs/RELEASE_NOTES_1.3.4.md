@@ -1,4 +1,4 @@
-# Maily 1.3.4 release candidate
+# Maily 1.3.4
 
 Maily now checks and reuses the runtime and ChatGPT sign-in already supplied by the installed ChatGPT desktop app with Codex features. The default download contains neither a ChatGPT installer nor another Codex runtime.
 
@@ -9,7 +9,7 @@ Maily now checks and reuses the runtime and ChatGPT sign-in already supplied by 
 
 Extract the ZIP and run MailyOutlookAddinSetup.exe. Existing settings are preserved by the upgrade flow. Uninstall Maily through Windows Installed apps; the shared desktop app and its sign-in are not removed.
 
-This unsigned experimental preview requires a compatible desktop app exposing its Codex runtime and an eligible ChatGPT account. Older ChatGPT-only clients may require updating. Microsoft mailbox registration is separate and may require an administrator. Review all generated content; use is your responsibility. See DISCLAIMER.md, the [privacy policy](https://github.com/madmike30/maily-public/blob/main/PRIVACY.md), and [verification](https://github.com/madmike30/maily-public/blob/main/docs/VERIFICATION.md). Fresh-account deployment and every Outlook rendering variant are not certified.
+This unsigned release requires a compatible desktop app exposing its Codex runtime and an eligible ChatGPT account. Older ChatGPT-only clients may require updating. Microsoft mailbox registration is separate and may require an administrator. Review all generated content; use is your responsibility. See DISCLAIMER.md, the [privacy policy](https://github.com/madmike30/maily-public/blob/main/PRIVACY.md), and [verification](https://github.com/madmike30/maily-public/blob/main/docs/VERIFICATION.md). Fresh-account deployment and every Outlook rendering variant are not certified.
 ## Upgrade and reliability
 
 - Reuse an older local Outlook registration for version-only upgrades when the complete manifest remains compatible. Changed commands, permissions, endpoints and unknown ownership still require repair; downgrades are not silently accepted.
@@ -21,3 +21,7 @@ This unsigned experimental preview requires a compatible desktop app exposing it
 After setup completes and Outlook restarts, open a synthetic draft. Confirm Maily appears, check the available model list, generate a reply from existing draft text, review the comparison, apply it, and verify that your signature and font remain intact. Test Undo before making further edits. Test Summary with a synthetic message in another language and prepare a reply from a selected action item. Nothing should be sent automatically.
 
 If setup reports a registration conflict, stop and follow the supported repair instructions. If generation or insertion fails, retain your draft and report the redacted error; do not repeatedly apply an uncertain write. Keep the previous package and setup backup until the upgrade is verified. Reinstall the previous version only if its registration remains compatible; a manifest downgrade may require deliberate registration repair.
+
+## Verified release scope
+
+The local Windows/classic Outlook release passed 62 synthetic checks, eight packaged AI checks, full code review and the merge gate. Local recovery installation, uninstall and reinstall completed; Microsoft accepted Maily registration and Outlook activation verified successfully on the tested account. Backend readiness, desktop sign-in, model discovery and current uncached UI assets passed. No mailbox messages were read or sent during verification. Other tenants and every Outlook rendering variant are not certified. Windows may request renewed localhost certificate consent after uninstall/reinstall.

@@ -1,10 +1,10 @@
 # Maily
 
-Public preview 1.3.4 reuses the installed ChatGPT desktop app runtime and sign-in instead of bundling another Codex runtime; see [CHANGELOG](CHANGELOG.md).
+Release 1.3.4 reuses the installed ChatGPT desktop app runtime and sign-in instead of bundling another Codex runtime; see [CHANGELOG](CHANGELOG.md).
 
 An open-source AI drafting assistant for **classic Outlook on Windows**. Generate a reply, compare it with your current draft, refine it, and apply it only when you are ready. Maily never sends mail automatically.
 
-**Public preview 1.3.4.0.** This is an unsigned, experimental release, not a Microsoft or OpenAI product. Fresh-account Microsoft registration has not been verified across organizations. Organization policy may require administrator deployment. Read the [limitations](docs/RELEASE_NOTES_1.3.4.md) before installing.
+**Release 1.3.4.0.** This is an unsigned release, not a Microsoft or OpenAI product. Fresh-account Microsoft registration has not been verified across organizations. Organization policy may require administrator deployment. Read the [limitations](docs/RELEASE_NOTES_1.3.4.md) before installing.
 
 ## Install only Maily
 
